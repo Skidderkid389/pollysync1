@@ -36,6 +36,21 @@ footer{text-align:center;color:#77859a;font-size:12px;padding:20px}
 </header>
 
 <main>
+  
+  
+<section class="card" id="loginCard">
+  <h2>Sign in to PollySync</h2>
+  <p class="muted">Use your registered account to access your authorised portal.</p>
+
+  <label for="loginEmail">Email address</label>
+  <input id="loginEmail" type="email" autocomplete="username" placeholder="Enter your email">
+
+  <label for="loginPassword">Password</label>
+  <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Enter your password">
+
+  <button type="button" onclick="signInToPollySync()">Sign In</button>
+  <p id="loginMessage" class="muted" role="status"></p>
+</section>
   <section class="card" id="welcome">
     <h2>Welcome to PollySync</h2>
     <p class="muted">A central platform for campaign management, polling-agent submissions and live results monitoring.</p>
@@ -61,7 +76,45 @@ footer{text-align:center;color:#77859a;font-size:12px;padding:20px}
 <footer>PollySync · Prototype v0.1 · Demonstration only</footer>
 
 <script>
-function openPortal(){
+
+  
+async function signInToPollySync() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const message = document.getElementById('loginMessage');
+
+  if (!email || !password) {
+    message.textContent = 'Enter your email and password.';
+    return;
+  }
+
+  message.textContent = 'Signing in...';
+
+  const { data, error } = await pollySyncDB.auth.signInWithPassword({
+    email: email,
+    password: password
+  });
+
+  if (error) {
+    message.textContent = 'Sign-in failed: ' + error.message;
+    return;
+  }
+
+  const { data: profile, error: profileError } = await pollySyncDB
+    .from('profiles')
+    .select('full_name, role, campaign_id')
+    .eq('id', data.user.id)
+    .single();
+
+  if (profileError || !profile) {
+    message.textContent = 'Signed in, but no profile was found. Contact the platform owner.';
+    return;
+  }
+
+  message.textContent = 'Signed in as ' + profile.full_name +
+    ' (' + profile.role + ').';
+  }
+  function openPortal(){
   const role=document.getElementById('role').value;
   const welcome=document.getElementById('welcome');
   const portal=document.getElementById('portal');
