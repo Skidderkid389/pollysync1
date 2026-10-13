@@ -1,0 +1,143 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#102746">
+<title>PollySync | Campaign Portal</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f2f5fa;color:#182b45}
+header{background:#102746;color:white;padding:20px}
+.brand{font-size:26px;font-weight:bold;letter-spacing:.5px}
+.brand span{color:#55d6be}
+header p{font-size:13px;color:#d0dbea;margin-bottom:0}
+main{max-width:700px;margin:24px auto;padding:0 15px}
+.card{background:white;border-radius:16px;padding:22px;margin-bottom:18px;box-shadow:0 5px 20px #10274612}
+h2{margin-top:0;font-size:21px}
+.muted{color:#6c7b90;font-size:14px;line-height:1.6}
+label{display:block;font-weight:bold;font-size:14px;margin:16px 0 7px}
+input,select{width:100%;padding:13px;border:1px solid #d4dce7;border-radius:9px;font-size:16px;background:white}
+button{width:100%;padding:14px;border:0;border-radius:9px;background:#126bdb;color:white;font-size:16px;font-weight:bold;margin-top:18px;cursor:pointer}
+button.secondary{background:#eaf1fb;color:#17416e}
+.notice{background:#fff6df;padding:13px;border-radius:9px;font-size:13px;line-height:1.5;color:#76551b}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tile{background:#f2f6fc;padding:16px;border-radius:11px}
+.tile strong{display:block;font-size:22px;margin-top:7px}
+footer{text-align:center;color:#77859a;font-size:12px;padding:20px}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">Polly<span>Sync</span></div>
+  <p>Campaign reporting and polling-station results</p>
+</header>
+
+<main>
+  <section class="card" id="welcome">
+    <h2>Welcome to PollySync</h2>
+    <p class="muted">A central platform for campaign management, polling-agent submissions and live results monitoring.</p>
+    <div class="notice"><strong>Prototype:</strong> This is a demonstration screen using fictional data. It is not connected to the live database and does not display official election results.</div>
+    <label for="role">Choose a demo portal</label>
+    <select id="role">
+      <option value="owner">Platform Owner</option>
+      <option value="client">Aspirant / Campaign</option>
+      <option value="agent">Polling Agent</option>
+    </select>
+    <button onclick="openPortal()">Open Demo Portal</button>
+  </section>
+
+  <section class="card hidden" id="portal">
+    <p class="muted" id="portalType">DEMO PORTAL</p>
+    <h2 id="portalTitle">Dashboard</h2>
+    <p class="muted" id="portalDescription"></p>
+    <div id="portalContent"></div>
+    <button class="secondary" onclick="goBack()">Back to portal selection</button>
+  </section>
+</main>
+
+<footer>PollySync · Prototype v0.1 · Demonstration only</footer>
+
+<script>
+function openPortal(){
+  const role=document.getElementById('role').value;
+  const welcome=document.getElementById('welcome');
+  const portal=document.getElementById('portal');
+  const title=document.getElementById('portalTitle');
+  const type=document.getElementById('portalType');
+  const description=document.getElementById('portalDescription');
+  const content=document.getElementById('portalContent');
+
+  welcome.classList.add('hidden');
+  portal.classList.remove('hidden');
+
+  if(role==='owner'){
+    type.textContent='PLATFORM OWNER · DEMO';
+    title.textContent='Owner Dashboard';
+    description.textContent='Manage campaign registrations and platform access.';
+    content.innerHTML=`
+      <div class="tiles">
+        <div class="tile">Campaigns<strong>0</strong></div>
+        <div class="tile">Active licences<strong>0</strong></div>
+      </div>
+      <p class="muted">Next: securely register campaigns, create accounts and manage licences.</p>`;
+  }else if(role==='client'){
+    type.textContent='CAMPAIGN PORTAL · DEMO';
+    title.textContent='Aspirant Dashboard';
+    description.textContent='Monitor submitted results and candidate rankings.';
+    content.innerHTML=`
+      <div class="tiles">
+        <div class="tile">Stations reporting<strong>0</strong></div>
+        <div class="tile">Votes recorded<strong>0</strong></div>
+      </div>
+      <p class="muted">Your campaign photo, polling stations, incoming results and automatic rankings will appear here after database integration.</p>`;
+  }else{
+    type.textContent='POLLING AGENT · DEMO';
+    title.textContent='Agent Portal';
+    description.textContent='Prepare a polling-station result submission.';
+    content.innerHTML=`
+      <label for="station">Polling station</label>
+      <input id="station" placeholder="Enter demo station name">
+      <label for="voters">Registered voters</label>
+      <input id="voters" type="number" min="1" placeholder="Enter registered voters">
+      <label for="candidate">Candidate name</label>
+      <input id="candidate" placeholder="Enter candidate name">
+      <label for="votes">Votes received</label>
+      <input id="votes" type="number" min="0" placeholder="Enter votes">
+      <button onclick="previewResult()">Confirm demo summary</button>
+      <div id="summary"></div>
+      <p class="muted">This preview does not submit or save election data.</p>`;
+  }
+}
+
+function previewResult(){
+  const station=document.getElementById('station').value.trim();
+  const voters=Number(document.getElementById('voters').value);
+  const candidate=document.getElementById('candidate').value.trim();
+  const votesInput=document.getElementById('votes').value;
+  const votes=Number(votesInput);
+  const summary=document.getElementById('summary');
+
+  if(!station||!candidate||!voters||voters<1||votesInput===''||votes<0||votes>voters){
+    summary.innerHTML='<p class="notice">Check your entries. Votes must be between zero and the registered-voter count.</p>';
+    return;
+  }
+  summary.innerHTML='<div class="notice"><strong>Demo summary</strong><br>Station: '+escapeText(station)+'<br>Registered voters: '+voters+'<br>Candidate: '+escapeText(candidate)+'<br>Votes: '+votes+'<br><br>Preview only — nothing has been submitted.</div>';
+}
+
+function escapeText(value){
+  return value.replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+function goBack(){
+  document.getElementById('portal').classList.add('hidden');
+  document.getElementById('welcome').classList.remove('hidden');
+}
+</script>
+</body>
+      </html>
+      
