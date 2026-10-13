@@ -111,8 +111,24 @@ async function signInToPollySync() {
     return;
   }
 
-  message.textContent = 'Signed in as ' + profile.full_name +
-    ' (' + profile.role + ').';
+  message.textContent = 'Welcome, ' + profile.full_name + '!';
+
+document.getElementById('loginCard').style.display = 'none';
+document.getElementById('welcome').style.display = 'none';
+
+if (profile.role === 'owner') {
+  document.getElementById('role').value = 'owner';
+openPortal();
+} else if (profile.role === 'client') {
+  document.getElementById('role').value = 'aspirant';
+openPortal();
+} else if (profile.role === 'agent') {
+  document.getElementById('role').value = 'agent';
+openPortal();
+} else {
+  message.textContent = 'Your account role is not recognised.';
+  document.getElementById('loginCard').style.display = 'block';
+  }
   }
   function openPortal(){
   const role=document.getElementById('role').value;
