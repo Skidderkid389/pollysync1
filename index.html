@@ -151,7 +151,24 @@ openPortal();
         <div class="tile">Campaigns<strong>0</strong></div>
         <div class="tile">Active licences<strong>0</strong></div>
       </div>
-      <p class="muted">Next: securely register campaigns, create accounts and manage licences.</p>`;
+      <div class="card">
+  <h3>Register a New Campaign</h3>
+
+  <label for="aspirantName">Aspirant Full Name</label>
+  <input id="aspirantName" type="text" placeholder="Enter full name">
+
+  <label for="campaignArea">Campaign Area</label>
+  <input id="campaignArea" type="text" placeholder="Constituency or ward">
+
+  <label for="clientCode">Client Code</label>
+  <input id="clientCode" type="text" placeholder="Create a unique code">
+
+  <label for="licenceExpiry">Licence Expiry Date</label>
+  <input id="licenceExpiry" type="date">
+
+  <button type="button" onclick="registerCampaign()">Register Campaign</button>
+  <p id="campaignMessage" class="muted"></p>
+</div>`;
   }else if(role==='client'){
     type.textContent='CAMPAIGN PORTAL · DEMO';
     title.textContent='Aspirant Dashboard';
