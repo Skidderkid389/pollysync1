@@ -141,6 +141,19 @@ function goBack(){
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+
+
+<script>
+const SUPABASE_URL = 'https://oeerrqyapjnbffunihpa.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_Wdy1sItW10VIz4g1dhuthA_mjHGUIPg';
+
+const pollySyncDB = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_PUBLISHABLE_KEY
+);
+
+console.log('PollySync Supabase client initialized.');
+</script>
 </body>
       </html>
       
