@@ -78,7 +78,43 @@ footer{text-align:center;color:#77859a;font-size:12px;padding:20px}
 <script>
 
   
-async function signInToPollySync() {
+
+  async function registerCampaign() {
+  const name = document.getElementById('aspirantName').value.trim();
+  const area = document.getElementById('campaignArea').value.trim();
+  const code = document.getElementById('clientCode').value.trim();
+  const expiry = document.getElementById('licenceExpiry').value;
+  const message = document.getElementById('campaignMessage');
+
+  if (!name || !area || !code || !expiry) {
+    message.textContent = 'Please fill in all fields.';
+    return;
+  }
+
+  message.textContent = 'Saving campaign...';
+
+  const { data, error } = await pollySyncDB
+    .from('campaigns')
+    .insert({
+      aspirant_name: name,
+      campaign_area: area,
+      client_code: code,
+      licence_expiry: expiry
+    })
+    .select()
+    .single();
+
+  if (error) {
+    message.textContent = 'Could not save campaign: ' + error.message;
+    return;
+  }
+
+  message.textContent = 'Campaign registered successfully!';
+  document.getElementById('aspirantName').value = '';
+  document.getElementById('campaignArea').value = '';
+  document.getElementById('clientCode').value = '';
+  document.getElementById('licenceExpiry').value = '';
+  }async function signInToPollySync() {
   const email = document.getElementById('loginEmail').value.trim();
   const password = document.getElementById('loginPassword').value;
   const message = document.getElementById('loginMessage');
