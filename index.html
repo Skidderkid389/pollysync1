@@ -111,7 +111,7 @@ footer{text-align:center;color:#77859a;font-size:12px;padding:20px}
     activeElement.textContent = activeCount ?? 0;
   }
   }
-  }async function registerCampaign() {
+  async function registerCampaign() {
   const name = document.getElementById('aspirantName').value.trim();
   const area = document.getElementById('campaignArea').value.trim();
   const code = document.getElementById('clientCode').value.trim();
@@ -188,7 +188,7 @@ if (profile.role === 'owner') {
   document.getElementById('role').value = 'owner';
 openPortal();
 } else if (profile.role === 'client') {
-  document.getElementById('role').value = 'aspirant';
+  document.getElementById('role').value = 'client';
 openPortal();
 } else if (profile.role === 'agent') {
   document.getElementById('role').value = 'agent';
