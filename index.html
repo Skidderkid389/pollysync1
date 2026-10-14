@@ -79,7 +79,22 @@ footer{text-align:center;color:#77859a;font-size:12px;padding:20px}
 
   
 
-  async function registerCampaign() {
+  
+  async function loadCampaignCount() {
+  const { count, error } = await pollySyncDB
+    .from('campaigns')
+    .select('*', { count: 'exact', head: true });
+
+  if (error) {
+    console.error('Could not load campaigns:', error.message);
+    return;
+  }
+
+  const countElement = document.getElementById('campaignCount');
+  if (countElement) {
+    countElement.textContent = count ?? 0;
+  }
+  }async function registerCampaign() {
   const name = document.getElementById('aspirantName').value.trim();
   const area = document.getElementById('campaignArea').value.trim();
   const code = document.getElementById('clientCode').value.trim();
@@ -184,7 +199,7 @@ openPortal();
     description.textContent='Manage campaign registrations and platform access.';
     content.innerHTML=`
       <div class="tiles">
-        <div class="tile">Campaigns<strong>0</strong></div>
+        <div class="tile">Campaigns<strong id="campaignCount">0</strong></div>
         <div class="tile">Active licences<strong>0</strong></div>
       </div>
       <div class="card">
@@ -205,6 +220,7 @@ openPortal();
   <button type="button" onclick="registerCampaign()">Register Campaign</button>
   <p id="campaignMessage" class="muted"></p>
 </div>`;
+    loadCampaignCount();
   }else if(role==='client'){
     type.textContent='CAMPAIGN PORTAL · DEMO';
     title.textContent='Aspirant Dashboard';
