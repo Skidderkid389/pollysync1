@@ -113,7 +113,7 @@ footer{text-align:center;color:#77859a;font-size:12px;padding:20px}
   
     const { data: campaigns, error: listError } = await pollySyncDB
     .from('campaigns')
-    .select('aspirant_name, campaign_area, licence_expiry, active')
+    .select('aspirant_name, client_email, campaign_area, licence_expiry, active')
     .order('created_at', { ascending: false });
 
   const listElement = document.getElementById('campaignList');
