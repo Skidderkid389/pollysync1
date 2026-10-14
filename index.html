@@ -148,11 +148,12 @@ footer{text-align:center;color:#77859a;font-size:12px;padding:20px}
 async function registerCampaign() {
   const name = document.getElementById('aspirantName').value.trim();
   const area = document.getElementById('campaignArea').value.trim();
+  const email = document.getElementById('clientEmail').value.trim();
   const code = document.getElementById('clientCode').value.trim();
   const expiry = document.getElementById('licenceExpiry').value;
   const message = document.getElementById('campaignMessage');
 
-  if (!name || !area || !code || !expiry) {
+  if (!name || !email || !area || !code || !expiry) {
     message.textContent = 'Please fill in all fields.';
     return;
   }
@@ -163,6 +164,7 @@ async function registerCampaign() {
     .from('campaigns')
     .insert({
       aspirant_name: name,
+      client_email: email,
       campaign_area: area,
       client_code: code,
       licence_expiry: expiry
@@ -177,10 +179,13 @@ async function registerCampaign() {
 
   message.textContent = 'Campaign registered successfully!';
   document.getElementById('aspirantName').value = '';
+  document.getElementById('clientEmail').value = '';
   document.getElementById('campaignArea').value = '';
   document.getElementById('clientCode').value = '';
   document.getElementById('licenceExpiry').value = '';
-  }async function signInToPollySync() {
+  }
+
+async function signInToPollySync() {
   const email = document.getElementById('loginEmail').value.trim();
   const password = document.getElementById('loginPassword').value;
   const message = document.getElementById('loginMessage');
@@ -266,7 +271,9 @@ openPortal();
   <label for="campaignArea">Campaign Area</label>
   <input id="campaignArea" type="text" placeholder="Constituency or ward">
 
-  <label for="clientCode">Client Code</label>
+  
+  <label for="clientEmail">Client Email Address</label>
+<input id="clientEmail" type="email" placeholder="Enter client's email address"><label for="clientCode">Client Code</label>
   <input id="clientCode" type="text" placeholder="Create a unique code">
 
   <label for="licenceExpiry">Licence Expiry Date</label>
