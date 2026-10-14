@@ -140,10 +140,12 @@ footer{text-align:center;color:#77859a;font-size:12px;padding:20px}
             <p>Status: ${valid ? 'Active' : 'Expired / Inactive'}</p>
           </div>
         `;
-            }).join('');
+                  }).join('');
     }
-      }
-  async function registerCampaign() {
+  }
+}
+
+async function registerCampaign() {
   const name = document.getElementById('aspirantName').value.trim();
   const area = document.getElementById('campaignArea').value.trim();
   const code = document.getElementById('clientCode').value.trim();
