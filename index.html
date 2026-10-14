@@ -110,7 +110,39 @@ footer{text-align:center;color:#77859a;font-size:12px;padding:20px}
   if (activeElement) {
     activeElement.textContent = activeCount ?? 0;
   }
-  }
+  
+    const { data: campaigns, error: listError } = await pollySyncDB
+    .from('campaigns')
+    .select('aspirant_name, campaign_area, licence_expiry, active')
+    .order('created_at', { ascending: false });
+
+  const listElement = document.getElementById('campaignList');
+
+  if (listElement) {
+    if (listError) {
+      listElement.textContent = 'Could not load campaigns.';
+    } else if (!campaigns || campaigns.length === 0) {
+      listElement.textContent = 'No campaigns registered yet.';
+    } else {
+      listElement.innerHTML = campaigns.map(campaign => {
+        const today = new Date().toLocaleDateString('en-CA', {
+          timeZone: 'Africa/Nairobi'
+        });
+
+        const valid = campaign.active &&
+          campaign.licence_expiry >= today;
+
+        return `
+          <div class="tile">
+            <strong>${campaign.aspirant_name || 'Unnamed aspirant'}</strong>
+            <p>Area: ${campaign.campaign_area || 'Not specified'}</p>
+            <p>Licence expires: ${campaign.licence_expiry || 'Not set'}</p>
+            <p>Status: ${valid ? 'Active' : 'Expired / Inactive'}</p>
+          </div>
+        `;
+            }).join('');
+    }
+      }
   async function registerCampaign() {
   const name = document.getElementById('aspirantName').value.trim();
   const area = document.getElementById('campaignArea').value.trim();
