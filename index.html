@@ -54,18 +54,18 @@ footer{text-align:center;color:#77859a;font-size:12px;padding:20px}
   <section class="card" id="welcome">
     <h2>Welcome to PollySync</h2>
     <p class="muted">A central platform for campaign management, polling-agent submissions and live results monitoring.</p>
-    <div class="notice"><strong>Prototype:</strong> This is a demonstration screen using fictional data. It is not connected to the live database and does not display official election results.</div>
-    <label for="role">Choose a demo portal</label>
+    <div class="notice"><strong>Welcome:</strong> PollySync brings campaign management, polling-agent reporting and results monitoring together in one platform. Features are being developed and tested.</div>
+    <label for="role">Choose your PollySync portal</label>
     <select id="role">
       <option value="owner">Platform Owner</option>
       <option value="client">Aspirant / Campaign</option>
       <option value="agent">Polling Agent</option>
     </select>
-    <button onclick="openPortal()">Open Demo Portal</button>
+    <button onclick="openPortal()">Open PollySync Portal</button>
   </section>
 
   <section class="card hidden" id="portal">
-    <p class="muted" id="portalType">DEMO PORTAL</p>
+    <p class="muted" id="portalType">POLLYSYNC MANAGEMENT PORTAL</p>
     <h2 id="portalTitle">Dashboard</h2>
     <p class="muted" id="portalDescription"></p>
     <div id="portalContent"></div>
@@ -73,7 +73,7 @@ footer{text-align:center;color:#77859a;font-size:12px;padding:20px}
   </section>
 </main>
 
-<footer>PollySync · Prototype v0.1 · Demonstration only</footer>
+<footer>PollySync · Campaign Management &amp; Results Reporting</footer>
 
 <script>
 
@@ -245,7 +245,7 @@ openPortal();
   portal.classList.remove('hidden');
 
   if(role==='owner'){
-    type.textContent='PLATFORM OWNER · DEMO';
+    type.textContent='POLLYSYNC · PLATFORM ADMINISTRATION';
     title.textContent='Welcome, Kelvin Kipruto Kemboi!';
     description.textContent='Manage campaign registrations and platform access.';
     content.innerHTML=`
@@ -277,7 +277,7 @@ openPortal();
 </div>`;
     loadCampaignCount();
   }else if(role==='client'){
-    type.textContent='CAMPAIGN PORTAL · DEMO';
+    type.textContent='POLLYSYNC · CAMPAIGN MANAGEMENT';
     title.textContent='Aspirant Dashboard';
     description.textContent='Monitor submitted results and candidate rankings.';
     content.innerHTML=`
@@ -287,7 +287,7 @@ openPortal();
       </div>
       <p class="muted">Your campaign photo, polling stations, incoming results and automatic rankings will appear here after database integration.</p>`;
   }else{
-    type.textContent='POLLING AGENT · DEMO';
+    type.textContent='POLLYSYNC · POLLING AGENT PORTAL';
     title.textContent='Agent Portal';
     description.textContent='Prepare a polling-station result submission.';
     content.innerHTML=`
