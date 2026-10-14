@@ -94,6 +94,23 @@ footer{text-align:center;color:#77859a;font-size:12px;padding:20px}
   if (countElement) {
     countElement.textContent = count ?? 0;
   }
+
+  const { count: activeCount, error: activeError } = await pollySyncDB
+    .from('campaigns')
+    .select('*', { count: 'exact', head: true })
+    .eq('active', true)
+    .gte('licence_expiry', new Date().toISOString().slice(0, 10));
+
+  if (activeError) {
+    console.error('Could not load active licences:', activeError.message);
+    return;
+  }
+
+  const activeElement = document.getElementById('activeLicenceCount');
+  if (activeElement) {
+    activeElement.textContent = activeCount ?? 0;
+  }
+  }
   }async function registerCampaign() {
   const name = document.getElementById('aspirantName').value.trim();
   const area = document.getElementById('campaignArea').value.trim();
@@ -200,7 +217,7 @@ openPortal();
     content.innerHTML=`
       <div class="tiles">
         <div class="tile">Campaigns<strong id="campaignCount">0</strong></div>
-        <div class="tile">Active licences<strong>0</strong></div>
+        <div class="tile">Active licences<strong id="activeLicenceCount">0</strong></div>
       </div>
       <div class="card">
   <h3>Register a New Campaign</h3>
