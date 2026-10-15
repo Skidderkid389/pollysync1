@@ -51,7 +51,7 @@ footer{text-align:center;color:#77859a;font-size:12px;padding:20px}
   <button type="button" onclick="signInToPollySync()">Sign In</button>
   <p id="loginMessage" class="muted" role="status"></p>
 </section>
-  <section class="card" id="welcome">
+  <section class="card hidden" id="welcome">
     <h2>Welcome to PollySync</h2>
     <p class="muted">A central platform for campaign management, polling-agent submissions and live results monitoring.</p>
     <div class="notice"><strong>Welcome:</strong> PollySync brings campaign management, polling-agent reporting and results monitoring together in one platform. Features are being developed and tested.</div>
@@ -79,6 +79,7 @@ footer{text-align:center;color:#77859a;font-size:12px;padding:20px}
 
   
 
+ let signedInRole = null; 
   
   async function loadCampaignCount() {
   const { count, error } = await pollySyncDB
@@ -113,7 +114,7 @@ footer{text-align:center;color:#77859a;font-size:12px;padding:20px}
   
     const { data: campaigns, error: listError } = await pollySyncDB
     .from('campaigns')
-    .select('aspirant_name, client_email, campaign_area, licence_expiry, active')
+    .select('id, aspirant_name, client_email, campaign_area, licence_expiry, active')
     .order('created_at', { ascending: false });
 
   const listElement = document.getElementById('campaignList');
@@ -139,6 +140,7 @@ footer{text-align:center;color:#77859a;font-size:12px;padding:20px}
             <p>Client Email: ${campaign.client_email || 'Not provided'}</p>
             <p>Licence expires: ${campaign.licence_expiry || 'Not set'}</p>
             <p>Status: ${valid ? 'Active' : 'Expired / Inactive'}</p>
+            ${campaign.client_email ? '<button type="button" onclick="inviteClient(\'' + campaign.id + '\')">Invite Client</button>' : '<p>No client email saved.</p>'}
           </div>
         `;
                   }).join('');
@@ -218,14 +220,16 @@ async function signInToPollySync() {
     message.textContent = 'Signed in, but no profile was found. Contact the platform owner.';
     return;
   }
-
+  if (!['owner', 'client', 'agent'].includes(profile.role)) {
+  message.textContent = 'Your account role is not recognised.';
+  return;
+  }
+signedInRole = profile.role;
   message.textContent = 'Welcome, ' + profile.full_name + '!';
 
-document.getElementById('loginCard').style.display = 'none';
-document.getElementById('welcome').style.display = 'none';
 
 if (profile.role === 'owner') {
-  document.getElementById('role').value = 'owner';
+     document.getElementById('role').value = 'owner';
 openPortal();
 } else if (profile.role === 'client') {
   document.getElementById('role').value = 'client';
@@ -238,17 +242,24 @@ openPortal();
   document.getElementById('loginCard').style.display = 'block';
   }
   }
-  function openPortal(){
+
+    function openPortal(){
   const role=document.getElementById('role').value;
-  const welcome=document.getElementById('welcome');
+
+  if (!signedInRole || role !== signedInRole) {
+    document.getElementById('portal').classList.add('hidden');
+    document.getElementById('welcome').classList.add('hidden');
+    document.getElementById('loginCard').style.display = 'block';
+    document.getElementById('loginMessage').textContent =
+      'Please sign in to your authorised PollySync account.';
+    return;
+  }
+const welcome=document.getElementById('welcome');
   const portal=document.getElementById('portal');
   const title=document.getElementById('portalTitle');
   const type=document.getElementById('portalType');
   const description=document.getElementById('portalDescription');
   const content=document.getElementById('portalContent');
-
-  welcome.classList.add('hidden');
-  portal.classList.remove('hidden');
 
   if(role==='owner'){
     type.textContent='POLLYSYNC · PLATFORM ADMINISTRATION';
@@ -311,6 +322,9 @@ openPortal();
       <div id="summary"></div>
       <p class="muted">This preview does not submit or save election data.</p>`;
   }
+        document.getElementById('loginCard').style.display = 'none';
+  welcome.classList.add('hidden');
+  portal.classList.remove('hidden');
 }
 
 function previewResult(){
@@ -334,10 +348,16 @@ function escapeText(value){
   });
 }
 
+
 function goBack(){
   document.getElementById('portal').classList.add('hidden');
-  document.getElementById('welcome').classList.remove('hidden');
-}
+  document.getElementById('welcome').classList.add('hidden');
+  document.getElementById('loginCard').style.display = 'block';
+  document.getElementById('loginMessage').textContent =
+    'Please sign in to continue.';
+  signedInRole = null;
+  }
+    
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -430,12 +450,16 @@ window.addEventListener('load', async function () {
     return;
   }
 
+  
   const { data, error } =
     await pollySyncDB.auth.getSession();
 
   if (error || !data.session) {
+    document.getElementById('passwordSetupMessage').textContent =
+      'Your invitation session could not be restored. Please open the invitation link again.';
     return;
   }
+  
 
   document.getElementById('loginCard').style.display = 'none';
   document.getElementById('welcome').style.display = 'none';
@@ -448,6 +472,68 @@ window.addEventListener('load', async function () {
     'Invitation recognised. Create your password below.';
 });
 </script>
+  <script>
+async function inviteClient(campaignId) {
+  const message = document.getElementById('campaignMessage');
+
+  if (!confirm('Send an invitation to the email saved for this campaign?')) {
+    return;
+  }
+
+  message.textContent = 'Preparing invitation...';
+
+  const { data: sessionData, error: sessionError } =
+    await pollySyncDB.auth.getSession();
+
+  const session = sessionData?.session;
+
+  if (sessionError || !session) {
+    message.textContent = 'Please sign in again before inviting a client.';
+    return;
+  }
+
+  const { data: campaign, error: campaignError } =
+    await pollySyncDB
+      .from('campaigns')
+      .select('client_email')
+      .eq('id', campaignId)
+      .single();
+
+  if (campaignError || !campaign?.client_email) {
+    message.textContent = 'Could not find the saved client email.';
+    return;
+  }
+
+  message.textContent = 'Sending invitation...';
+
+  try {
+    const response = await fetch(
+      'https://oeerrqyapjnbffunihpa.supabase.co/functions/v1/pollysync-client-invite',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + session.access_token,
+          'apikey': 'sb_publishable_Wdy1sItW10VIz4g1dhuthA_mjHGUIPg'
+        },
+        body: JSON.stringify({
+          campaign_id: campaignId,
+          email: campaign.client_email
+        })
+      }
+    );
+
+    const result = await response.json();
+
+    message.textContent = response.ok
+      ? 'Invitation sent successfully!'
+      : 'Invitation not completed: ' +
+        (result.error || result.message || 'Please check Supabase logs.');
+  } catch (error) {
+    message.textContent = 'Connection failed. Please check your internet and try again.';
+  }
+}
+  </script>
   
   
 </body>
