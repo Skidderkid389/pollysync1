@@ -243,6 +243,40 @@ footer{text-align:center;color:#77859a;font-size:12px;padding:20px}
   }).join('');
   }
   
+  
+  async function saveDefaultStationPrice() {
+  const input = document.getElementById('defaultStationPrice');
+  const message = document.getElementById('pricingMessage');
+
+  if (!input || !message) return;
+
+  const price = Number(input.value);
+
+  if (input.value.trim() === '' || !Number.isFinite(price) || price < 0) {
+    message.textContent = 'Please enter a valid price.';
+    return;
+  }
+
+  message.textContent = 'Saving price...';
+
+  const { error } = await pollySyncDB
+    .from('platform_settings')
+    .update({
+      default_station_price: price,
+      updated_at: new Date().toISOString()
+    })
+    .eq('setting_key', 'default_station_price');
+
+  if (error) {
+    console.error('Could not save default station price:', error.message);
+    message.textContent = 'Could not save price. Please check owner access.';
+    return;
+  }
+
+  message.textContent = 'Default station price saved successfully.';
+  await loadStationBilling();
+  }
+  
   async function loadClientCampaign() {
   const nameElement = document.getElementById('clientAspirantName');
   const areaElement = document.getElementById('clientCampaignArea');
@@ -443,10 +477,33 @@ const welcome=document.getElementById('welcome');
   <h3>Polling Stations & Billing</h3>
   <p class="muted">Station counts, payment status and amounts due will appear here.</p>
   <div id="stationBillingList">Loading station billing...</div>
+  </div>
+  
+<div class="card">
+  <h3>Platform Pricing</h3>
+  <p class="muted">Set the standard fee charged per polling station.</p>
+
+  <label for="defaultStationPrice">Default price per polling station (KSh)</label>
+  <input
+    id="defaultStationPrice"
+    type="number"
+    min="0"
+    step="0.01"
+    placeholder="Enter price"
+  >
+
+  <button type="button" onclick="saveDefaultStationPrice()">
+    Save Default Price
+  </button>
+
+  <p id="pricingMessage" class="muted"></p>
+</div>
 </div><div class="card">
   <h3>Registered Campaigns</h3>
   <div id="campaignList">Loading campaigns...</div>
-</div><div class="card">
+</div>
+
+<div class="card">
   <h3>Register a New Campaign</h3>
 
   <label for="aspirantName">Aspirant Full Name</label>
