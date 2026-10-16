@@ -135,7 +135,8 @@ footer{text-align:center;color:#77859a;font-size:12px;padding:20px}
 
         return `
           <div class="tile">
-            <strong>${campaign.aspirant_name || 'Unnamed aspirant'}</strong>
+            
+                      ${campaign.active ? '<button type="button" class="secondary" onclick="cancelCampaign(\'' + campaign.id + '\')">Cancel Campaign</button>' : '<p class="muted">Campaign cancelled</p>'}<strong>${campaign.aspirant_name || 'Unnamed aspirant'}</strong>
             <p>Area: ${campaign.campaign_area || 'Not specified'}</p>
             <p>Client Email: ${campaign.client_email || 'Not provided'}</p>
             <p>Licence expires: ${campaign.licence_expiry || 'Not set'}</p>
@@ -266,7 +267,8 @@ const welcome=document.getElementById('welcome');
     title.textContent='Welcome, Kelvin Kipruto Kemboi!';
     description.textContent='Manage campaign registrations and platform access.';
     content.innerHTML=`
-      <div class="tiles">
+      
+            <button type="button" onclick="logoutPollySync()" class="secondary">Logout</button><div class="tiles">
         <div class="tile">Campaigns<strong id="campaignCount">0</strong></div>
         <div class="tile">Active licences<strong id="activeLicenceCount">0</strong></div>
       </div>
@@ -356,6 +358,50 @@ function goBack(){
   document.getElementById('loginMessage').textContent =
     'Please sign in to continue.';
   signedInRole = null;
+  }
+
+  async function logoutPollySync() {
+  const { error } = await pollySyncDB.auth.signOut();
+
+  if (error) {
+    alert('Logout failed. Please try again.');
+    return;
+  }
+
+  signedInRole = null;
+
+  document.getElementById('portal').classList.add('hidden');
+  document.getElementById('welcome').classList.add('hidden');
+  document.getElementById('loginCard').style.display = 'block';
+  document.getElementById('loginPassword').value = '';
+  document.getElementById('loginMessage').textContent =
+    'You have been signed out successfully.';
+}
+
+  async function cancelCampaign(campaignId) {
+  if (!confirm('Are you sure you want to cancel this campaign? Its records will be preserved.')) {
+    return;
+  }
+
+  const { data: sessionData } = await pollySyncDB.auth.getSession();
+
+  if (!sessionData?.session) {
+    alert('Please sign in again.');
+    return;
+  }
+
+  const { error } = await pollySyncDB
+    .from('campaigns')
+    .update({ active: false })
+    .eq('id', campaignId);
+
+  if (error) {
+    alert('Campaign could not be cancelled: ' + error.message);
+    return;
+  }
+
+  alert('Campaign cancelled. Its records have been preserved.');
+  await loadCampaignCount();
   }
     
 </script>
