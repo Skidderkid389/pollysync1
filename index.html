@@ -154,7 +154,96 @@ footer{text-align:center;color:#77859a;font-size:12px;padding:20px}
 
 
 
-async function loadClientCampaign() {
+
+  async function loadStationBilling() {
+  const listElement = document.getElementById('stationBillingList');
+
+  if (!listElement) return;
+
+  listElement.textContent = 'Loading station billing...';
+
+  const { data: campaigns, error } = await pollySyncDB
+    .from('campaigns')
+    .select('id, aspirant_name, client_email, special_station_price')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Could not load station billing:', error.message);
+    listElement.textContent = 'Could not load station billing.';
+    return;
+  }
+
+  if (!campaigns || campaigns.length === 0) {
+    listElement.textContent = 'No campaigns registered yet.';
+    return;
+  }
+
+  const { data: settings, error: settingsError } = await pollySyncDB
+    .from('platform_settings')
+    .select('default_station_price')
+    .eq('setting_key', 'default_station_price')
+    .maybeSingle();
+
+  if (settingsError) {
+    console.error('Could not load default station price:', settingsError.message);
+    listElement.textContent = 'Could not load pricing settings.';
+    return;
+  }
+
+  const defaultPrice = settings?.default_station_price;
+
+  const { data: stations, error: stationError } = await pollySyncDB
+    .from('polling_stations')
+    .select('campaign_id, payment_status, is_active');
+
+  if (stationError) {
+    console.error('Could not load polling stations:', stationError.message);
+    listElement.textContent = 'Could not load polling stations.';
+    return;
+  }
+
+  listElement.innerHTML = campaigns.map(campaign => {
+    const campaignStations = (stations || []).filter(
+      station => station.campaign_id === campaign.id
+    );
+
+    const stationCount = campaignStations.length;
+    const paidCount = campaignStations.filter(
+      station => station.payment_status === 'paid'
+    ).length;
+
+    const price = campaign.special_station_price ?? defaultPrice;
+    const amountDue = price == null
+      ? null
+      : (stationCount - paidCount) * Number(price);
+
+    return `
+      <div class="tile">
+        <strong>${campaign.aspirant_name || 'Unnamed aspirant'}</strong>
+        <p>Client: ${campaign.client_email || 'Not provided'}</p>
+        <p>Registered stations: ${stationCount}</p>
+        <p>Stations marked paid: ${paidCount}</p>
+        <p>Price per station: ${
+          price == null ? 'Not set' : 'KSh ' + Number(price).toLocaleString('en-KE')
+        }</p>
+        <p>Estimated unpaid amount: ${
+          amountDue == null ? 'Set a price first' : 'KSh ' + amountDue.toLocaleString('en-KE')
+        }</p>
+        <p>Billing status: ${
+          stationCount === 0
+            ? 'No stations registered'
+            : paidCount === stationCount
+              ? 'All stations marked paid'
+              : paidCount > 0
+                ? 'Partially paid'
+                : 'Pending'
+        }</p>
+      </div>
+    `;
+  }).join('');
+  }
+  
+  async function loadClientCampaign() {
   const nameElement = document.getElementById('clientAspirantName');
   const areaElement = document.getElementById('clientCampaignArea');
   const statusElement = document.getElementById('clientLicenceStatus');
@@ -378,6 +467,7 @@ const welcome=document.getElementById('welcome');
   <p id="campaignMessage" class="muted"></p>
 </div>`;
     loadCampaignCount();
+    loadStationBilling();
   }else if(role==='client'){
     type.textContent='POLLYSYNC · CAMPAIGN MANAGEMENT';
     title.textContent='Aspirant Dashboard';
