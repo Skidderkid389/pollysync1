@@ -151,6 +151,80 @@ footer{text-align:center;color:#77859a;font-size:12px;padding:20px}
   }
 }
 
+
+
+
+async function loadClientCampaign() {
+  const nameElement = document.getElementById('clientAspirantName');
+  const areaElement = document.getElementById('clientCampaignArea');
+  const statusElement = document.getElementById('clientLicenceStatus');
+
+  try {
+    const { data: sessionData, error: sessionError } =
+      await pollySyncDB.auth.getSession();
+
+    if (sessionError || !sessionData.session) {
+      nameElement.textContent = 'Please sign in again.';
+      areaElement.textContent = 'Unavailable';
+      statusElement.textContent = 'Unavailable';
+      return;
+    }
+
+    const userId = sessionData.session.user.id;
+
+    const { data: profile, error: profileError } =
+      await pollySyncDB
+        .from('profiles')
+        .select('campaign_id')
+        .eq('id', userId)
+        .single();
+
+    if (profileError || !profile || !profile.campaign_id) {
+      nameElement.textContent = 'No campaign assigned';
+      areaElement.textContent = 'Unavailable';
+      statusElement.textContent = 'Unavailable';
+      return;
+    }
+
+    const { data: campaign, error: campaignError } =
+      await pollySyncDB
+        .from('campaigns')
+        .select('aspirant_name, campaign_area, licence_expiry, active')
+        .eq('id', profile.campaign_id)
+        .single();
+
+    if (campaignError || !campaign) {
+      nameElement.textContent = 'Could not load campaign';
+      areaElement.textContent = 'Unavailable';
+      statusElement.textContent = 'Unavailable';
+      return;
+    }
+
+    nameElement.textContent =
+      campaign.aspirant_name || 'Name not provided';
+
+    areaElement.textContent =
+      campaign.campaign_area || 'Not specified';
+
+    const today = new Date().toLocaleDateString('en-CA', {
+      timeZone: 'Africa/Nairobi'
+    });
+
+    const valid = campaign.active &&
+      campaign.licence_expiry &&
+      campaign.licence_expiry >= today;
+
+    statusElement.textContent = valid
+      ? 'Active'
+      : 'Expired / Inactive';
+
+  } catch (error) {
+    console.error('Could not load client campaign:', error);
+    nameElement.textContent = 'Unable to load campaign';
+    areaElement.textContent = 'Unavailable';
+    statusElement.textContent = 'Unavailable';
+  }
+}
 async function registerCampaign() {
   const name = document.getElementById('aspirantName').value.trim();
   const area = document.getElementById('campaignArea').value.trim();
@@ -324,6 +398,7 @@ const welcome=document.getElementById('welcome');
         <p class="muted">Your campaign data should remain accessible only to authorised users.</p>
       </div>
 <p class="muted">Your campaign photo, polling stations, incoming results and automatic rankings will appear here after database integration.</p>`;
+    loadClientCampaign();
   }else{
     type.textContent='POLLYSYNC · POLLING AGENT PORTAL';
     title.textContent='Agent Portal';
