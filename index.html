@@ -323,11 +323,19 @@ footer{text-align:center;color:#77859a;font-size:12px;padding:20px}
       return;
     }
 
+    
     nameElement.textContent =
       campaign.aspirant_name || 'Name not provided';
 
+    const welcomeElement = document.getElementById('clientWelcomeMessage');
+    if (welcomeElement) {
+      welcomeElement.textContent = 'Welcome, ' +
+        (campaign.aspirant_name || 'Aspirant') + '!';
+    }
+
     areaElement.textContent =
       campaign.campaign_area || 'Not specified';
+  
 
     const today = new Date().toLocaleDateString('en-CA', {
       timeZone: 'Africa/Nairobi'
@@ -602,7 +610,7 @@ const welcome=document.getElementById('welcome');
     loadStationBilling();
   }else if(role==='client'){
     type.textContent='POLLYSYNC · CAMPAIGN MANAGEMENT';
-    title.textContent='Aspirant Dashboard';
+    title.textContent='Your Campaign Portal';
     description.textContent='Monitor submitted results and candidate rankings.';
     content.innerHTML=`
       
@@ -613,7 +621,14 @@ const welcome=document.getElementById('welcome');
       </div>
       
       <div class="card">
-        <h3>My Campaign</h3>
+        
+        
+<div class="card">
+  <h3 id="clientWelcomeMessage">Welcome to PollySync!</h3>
+  <p class="muted">Your campaign. Your results. Your privacy.</p>
+  <p class="muted">Your campaign information is intended for authorised users only.</p>
+</div>
+  <h3>My Campaign</h3>
         <p><strong>Aspirant:</strong> <span id="clientAspirantName">Loading campaign details...</span></p>
         <p><strong>Campaign Area:</strong> <span id="clientCampaignArea">Loading...</span></p>
         <p><strong>Licence Status:</strong> <span id="clientLicenceStatus">Checking...</span></p>
