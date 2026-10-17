@@ -244,7 +244,144 @@ footer{text-align:center;color:#77859a;font-size:12px;padding:20px}
   }
   
   
-  async function saveDefaultStationPrice() {
+  
+  
+  
+async function loadOwnerPaymentRequests() {
+  const container = document.getElementById('ownerPaymentRequests');
+
+  if (!container) return;
+
+  container.textContent = 'Loading payment requests...';
+
+  try {
+    const { data: requests, error } = await pollySyncDB
+      .from('payment_requests')
+      .select('id, campaign_id, stations_count, price_per_station, total_amount, mpesa_receipt, payment_status, created_at')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    if (!requests || requests.length === 0) {
+      container.textContent = 'No payment requests submitted yet.';
+      return;
+    }
+
+    const { data: campaigns, error: campaignError } =
+      await pollySyncDB
+        .from('campaigns')
+        .select('id, aspirant_name, client_email');
+
+    if (campaignError) throw campaignError;
+
+    const campaignMap = new Map(
+      (campaigns || []).map(campaign => [
+        campaign.id,
+        campaign
+      ])
+    );
+
+    const safe = value =>
+      String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      })[char]);
+
+    container.innerHTML = requests.map(request => {
+      const campaign = campaignMap.get(request.campaign_id);
+      const status = String(
+        request.payment_status || 'pending'
+      ).toLowerCase();
+
+      const amount = Number(
+        request.total_amount
+      ).toLocaleString('en-KE', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+
+      const buttons = status === 'pending'
+        ? `
+          <button
+            type="button"
+            style="background:#168447;color:white;"
+            onclick="reviewStationPayment('${safe(request.id)}', true)">
+            Approve Payment
+          </button>
+          <button
+            type="button"
+            style="background:#c62828;color:white;"
+            onclick="reviewStationPayment('${safe(request.id)}', false)">
+            Reject Payment
+          </button>
+        `
+        : '';
+
+      return `
+        <div class="tile">
+          <strong>${safe(campaign?.aspirant_name || 'Unknown campaign')}</strong>
+          <p>Client: ${safe(campaign?.client_email || 'Not provided')}</p>
+          <p>M-Pesa Transaction Code: ${safe(request.mpesa_receipt)}</p>
+          <p>Stations covered: ${safe(request.stations_count)}</p>
+          <p>Price per station: KSh ${safe(request.price_per_station)}</p>
+          <p>Total amount: KSh ${amount}</p>
+          <p>Status: ${safe(status.toUpperCase())}</p>
+          ${buttons}
+        </div>
+      `;
+    }).join('');
+
+  } catch (error) {
+    console.error('Could not load payment requests:', error);
+    container.textContent =
+      'Could not load payment requests. Please refresh and try again.';
+  }
+  }
+  
+
+  
+async function reviewStationPayment(requestId, approve) {
+  const action = approve ? 'approve' : 'reject';
+
+  const confirmed = confirm(
+    `Are you sure you want to ${action} this payment request?`
+  );
+
+  if (!confirmed) return;
+
+  try {
+    const { error } = await pollySyncDB.rpc(
+      'review_station_payment',
+      {
+        p_request_id: requestId,
+        p_approve: approve
+      }
+    );
+
+    if (error) throw error;
+
+    alert(
+      approve
+        ? 'Payment approved. The stations covered by this request are now activated.'
+        : 'Payment rejected. The stations have not been activated.'
+    );
+
+    await loadOwnerPaymentRequests();
+    await loadStationBilling();
+
+  } catch (error) {
+    console.error('Payment review failed:', error);
+
+    alert(
+      'Could not review payment: ' + error.message
+    );
+  }
+}
+  
+async function saveDefaultStationPrice() {
   const input = document.getElementById('defaultStationPrice');
   const message = document.getElementById('pricingMessage');
 
@@ -857,6 +994,7 @@ const welcome=document.getElementById('welcome');
 </div>`;
     loadCampaignCount();
     loadStationBilling();
+    loadOwnerPaymentRequests();
   }else if(role==='client'){
     type.textContent='POLLYSYNC · CAMPAIGN MANAGEMENT';
     title.textContent='Your Campaign Portal';
