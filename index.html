@@ -419,8 +419,9 @@ async function registerClientStation() {
     }
 
     message.textContent = 'Polling station registered successfully!';
-    stationInput.value = '';
-    votersInput.value = '';
+await loadClientStations();
+stationInput.value = '';
+votersInput.value = '';
 
     if (list) {
       list.textContent = 'Station saved. The station list will be added next.';
@@ -431,7 +432,77 @@ async function registerClientStation() {
   }
 }
 
-  async function registerCampaign() {
+  
+  
+async function loadClientStations() {
+  const list = document.getElementById('clientStationList');
+
+  if (!list) return;
+
+  list.textContent = 'Loading polling stations...';
+
+  try {
+    const { data: sessionData, error: sessionError } =
+      await pollySyncDB.auth.getSession();
+
+    if (sessionError || !sessionData.session) {
+      list.textContent = 'Please sign in again.';
+      return;
+    }
+
+    const userId = sessionData.session.user.id;
+
+    const { data: profile, error: profileError } =
+      await pollySyncDB
+        .from('profiles')
+        .select('campaign_id, role')
+        .eq('id', userId)
+        .single();
+
+    if (
+      profileError ||
+      !profile ||
+      profile.role !== 'client' ||
+      !profile.campaign_id
+    ) {
+      list.textContent = 'No campaign is assigned to this account.';
+      return;
+    }
+
+    const { data: stations, error: stationsError } =
+      await pollySyncDB
+        .from('polling_stations')
+        .select('id, station_name, registered_voters, payment_status, is_active')
+        .eq('campaign_id', profile.campaign_id)
+        .order('station_name', { ascending: true });
+
+    if (stationsError) {
+      console.error('Could not load polling stations:', stationsError.message);
+      list.textContent = 'Could not load polling stations.';
+      return;
+    }
+
+    if (!stations || stations.length === 0) {
+      list.textContent = 'No polling stations registered yet.';
+      return;
+    }
+
+    list.innerHTML = stations.map(station => `
+      <div class="tile">
+        <strong>${station.station_name}</strong>
+        <p>Registered voters: ${station.registered_voters ?? 0}</p>
+        <p>Payment: ${station.payment_status || 'Not recorded'}</p>
+        <p>Status: ${station.is_active ? 'Active' : 'Inactive'}</p>
+      </div>
+    `).join('');
+
+      } catch (error) {
+    console.error('Polling station loading error:', error);
+        list.textContent = 'An unexpected error occurred while loading stations.';
+  }
+}
+
+async function registerCampaign() {
   const name = document.getElementById('aspirantName').value.trim();
   const area = document.getElementById('campaignArea').value.trim();
   const email = document.getElementById('clientEmail').value.trim();
@@ -670,6 +741,7 @@ const welcome=document.getElementById('welcome');
       </div>
 <p class="muted">Your campaign photo, polling stations, incoming results and automatic rankings will appear here after database integration.</p>`;
     loadClientCampaign();
+    loadClientStations();
   }else{
     type.textContent='POLLYSYNC · POLLING AGENT PORTAL';
     title.textContent='Agent Portal';
