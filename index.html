@@ -143,6 +143,7 @@ footer{text-align:center;color:#77859a;font-size:12px;padding:20px}
             <p>Client Email: ${campaign.client_email || 'Not provided'}</p>
             <p>Licence expires: ${campaign.licence_expiry || 'Not set'}</p>
             <p>Status: ${valid ? 'Active' : 'Expired / Inactive'}</p>
+                        ${campaign.active ? '<button type="button" onclick="activateCampaignLicence(\'' + campaign.id + '\')">Activate / Renew Licence</button>' : ''}
             ${campaign.client_email ? '<button type="button" onclick="inviteClient(\'' + campaign.id + '\')">Invite Client</button>' : '<p>No client email saved.</p>'}
           </div>
         `;
@@ -1158,7 +1159,68 @@ function goBack(){
     'You have been signed out successfully.';
 }
 
-  async function cancelCampaign(campaignId) {
+  
+  
+  
+async function activateCampaignLicence(campaignId) {
+  const newExpiry = prompt(
+    'Enter the new licence expiry date (YYYY-MM-DD):'
+  );
+
+  if (newExpiry === null) return;
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(newExpiry)) {
+    alert('Please enter the date in YYYY-MM-DD format, for example 2026-11-30.');
+    return;
+  }
+
+  const parsedDate = new Date(newExpiry + 'T00:00:00Z');
+
+  if (
+    Number.isNaN(parsedDate.getTime()) ||
+    parsedDate.toISOString().slice(0, 10) !== newExpiry
+  ) {
+    alert('That date is invalid. Please try again.');
+    return;
+  }
+
+  if (!confirm(
+    'Activate or renew this campaign licence until ' +
+    newExpiry + '?'
+  )) {
+    return;
+  }
+
+  try {
+    const { data: sessionData } =
+      await pollySyncDB.auth.getSession();
+
+    if (!sessionData?.session) {
+      alert('Please sign in again.');
+      return;
+    }
+
+    const { error } = await pollySyncDB
+      .from('campaigns')
+      .update({
+        active: true,
+        licence_expiry: newExpiry
+      })
+      .eq('id', campaignId);
+
+    if (error) throw error;
+
+    alert('Campaign licence activated or renewed successfully.');
+    await loadCampaignCount();
+
+  } catch (error) {
+    console.error('Licence activation failed:', error);
+    alert('Could not update the licence: ' + error.message);
+  }
+  }
+  
+  
+async function cancelCampaign(campaignId) {
   if (!confirm('Are you sure you want to cancel this campaign? Its records will be preserved.')) {
     return;
   }
