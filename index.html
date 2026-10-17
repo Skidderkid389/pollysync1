@@ -404,6 +404,31 @@ async function registerClientStation() {
       return;
     }
 
+    
+    
+    const { data: existingStations, error: checkError } =
+      await pollySyncDB
+        .from('polling_stations')
+        .select('station_name')
+        .eq('campaign_id', profile.campaign_id);
+
+    if (checkError) {
+      message.textContent = 'Could not check existing stations. Please try again.';
+      return;
+    }
+
+    const duplicateExists = (existingStations || []).some(station =>
+      station.station_name.trim().toLowerCase() ===
+      stationName.trim().toLowerCase()
+    );
+
+    
+    if (duplicateExists) {
+      message.textContent =
+        'This polling station is already registered in your campaign.';
+      return;
+    }
+
     const { error: insertError } = await pollySyncDB
       .from('polling_stations')
       .insert({
@@ -411,6 +436,7 @@ async function registerClientStation() {
         station_name: stationName,
         registered_voters: registeredVoters
       });
+        
 
     if (insertError) {
       console.error('Could not register station:', insertError.message);
