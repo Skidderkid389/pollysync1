@@ -528,6 +528,146 @@ async function loadClientStations() {
   }
 }
 
+
+  
+async function loadStationPaymentQuote() {
+  const summary = document.getElementById('paymentSummary');
+  const button = document.getElementById('submitStationPaymentButton');
+
+  if (!summary || !button) return;
+
+  summary.textContent = 'Loading payment summary...';
+  button.disabled = true;
+
+  try {
+    const { data, error } = await pollySyncDB.rpc(
+      'get_station_payment_quote'
+    );
+
+    if (error) throw error;
+
+    const money = amount =>
+      new Intl.NumberFormat('en-KE', {
+        style: 'currency',
+        currency: 'KES',
+        maximumFractionDigits: 2
+      }).format(amount);
+
+    const count = Number(data.stations_count || 0);
+    const price = data.price_per_station;
+
+    if (data.has_pending_request) {
+      summary.textContent =
+        'You already have a pending payment request. Please wait for the owner to review it.';
+      button.disabled = true;
+    } else if (count === 0) {
+      summary.textContent = 'No unpaid polling stations are awaiting payment.';
+      button.disabled = true;
+    } else if (price === null || price === undefined) {
+      summary.textContent =
+        'Station price is not configured. Please contact the platform owner.';
+      button.disabled = true;
+    } else {
+      summary.textContent =
+        count + ' unpaid station(s) × ' + money(price) +
+        ' = ' + money(data.total_amount);
+      button.disabled = false;
+    }
+
+    await loadClientPaymentRequestStatus();
+  } catch (error) {
+    console.error('Payment quote loading error:', error);
+    summary.textContent =
+      'Unable to load payment details. Please refresh and try again.';
+    button.disabled = true;
+  }
+  }
+  
+
+  
+async function submitStationPaymentRequest() {
+  const receiptInput = document.getElementById('mpesaReceipt');
+  const message = document.getElementById('paymentRequestMessage');
+  const button = document.getElementById('submitStationPaymentButton');
+
+  const receipt = receiptInput.value.trim();
+
+  if (!receipt) {
+    message.textContent = 'Please enter your M-Pesa transaction code.';
+    return;
+  }
+
+  button.disabled = true;
+  message.textContent = 'Submitting payment request...';
+
+  try {
+    const { data, error } = await pollySyncDB.rpc(
+      'submit_station_payment',
+      { p_mpesa_receipt: receipt }
+    );
+
+    if (error) throw error;
+
+    message.textContent =
+      'Payment request submitted successfully. ' +
+      'Stations: ' + data.stations_count +
+      '. Amount: KSh ' + Number(data.total_amount).toLocaleString('en-KE') +
+      '. Your payment is awaiting owner verification.';
+
+    receiptInput.value = '';
+
+    await loadStationPaymentQuote();
+  } catch (error) {
+    console.error('Payment submission error:', error);
+    message.textContent =
+      error.message || 'Unable to submit the request. Please try again.';
+    await loadStationPaymentQuote();
+  }
+  }
+  
+
+  
+async function loadClientPaymentRequestStatus() {
+  const container = document.getElementById('clientPaymentRequestStatus');
+
+  if (!container) return;
+
+  container.textContent = 'Loading payment request status...';
+
+  try {
+    const { data, error } = await pollySyncDB
+      .from('payment_requests')
+      .select(
+        'stations_count, price_per_station, total_amount, payment_status, created_at, reviewed_at'
+      )
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      container.textContent = 'No payment requests submitted yet.';
+      return;
+    }
+
+    const request = data[0];
+    const status = String(request.payment_status || 'pending').toUpperCase();
+    const amount = Number(request.total_amount).toLocaleString('en-KE', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+
+    container.textContent =
+      'Latest payment request: ' + status +
+      ' | Stations: ' + request.stations_count +
+      ' | Amount: KSh ' + amount;
+  } catch (error) {
+    console.error('Payment status loading error:', error);
+    container.textContent =
+      'Unable to load payment request status right now.';
+  }
+  }
+  
 async function registerCampaign() {
   const name = document.getElementById('aspirantName').value.trim();
   const area = document.getElementById('campaignArea').value.trim();
@@ -759,7 +899,35 @@ const welcome=document.getElementById('welcome');
         <p id="stationRegistrationMessage" class="muted"></p>
         <div id="clientStationList">Loading polling stations...</div>
       </div>
-      <div class="card">
+      
+      
+<div class="card">
+  <h3>Polling Station Payment</h3>
+  <p>Review your unpaid polling stations and submit your M-Pesa payment details.</p>
+
+  <p id="paymentSummary">Loading payment summary...</p>
+
+  <label for="mpesaReceipt">M-Pesa Transaction Code</label>
+  <input
+    type="text"
+    id="mpesaReceipt"
+    placeholder="e.g. QWE123ABC"
+    autocomplete="off"
+  >
+
+  <button
+    type="button"
+    id="submitStationPaymentButton"
+    onclick="submitStationPaymentRequest()"
+    style="background:#168447;color:white;"
+  >
+    Submit Payment Request
+  </button>
+
+  <p id="paymentRequestMessage" class="muted"></p>
+  <div id="clientPaymentRequestStatus"></div>
+</div>
+  <div class="card">
         <h3>Results &amp; Reports</h3>
         <p>Your campaign results and downloadable report will appear here once database integration is complete.</p>
 
@@ -768,6 +936,7 @@ const welcome=document.getElementById('welcome');
 <p class="muted">Your campaign photo, polling stations, incoming results and automatic rankings will appear here after database integration.</p>`;
     loadClientCampaign();
     loadClientStations();
+    loadStationPaymentQuote();
   }else{
     type.textContent='POLLYSYNC · POLLING AGENT PORTAL';
     title.textContent='Agent Portal';
