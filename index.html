@@ -348,7 +348,82 @@ footer{text-align:center;color:#77859a;font-size:12px;padding:20px}
     statusElement.textContent = 'Unavailable';
   }
 }
-async function registerCampaign() {
+
+  
+  
+async function registerClientStation() {
+  const stationInput = document.getElementById('newStationName');
+  const votersInput = document.getElementById('newStationVoters');
+  const message = document.getElementById('stationRegistrationMessage');
+  const list = document.getElementById('clientStationList');
+
+  const stationName = stationInput.value.trim();
+  const votersText = votersInput.value.trim();
+  const registeredVoters = Number(votersText);
+
+  if (!stationName || votersText === '') {
+    message.textContent = 'Enter the station name and registered voters.';
+    return;
+  }
+
+  if (!Number.isInteger(registeredVoters) || registeredVoters < 0) {
+    message.textContent = 'Enter a valid whole number of registered voters.';
+    return;
+  }
+
+  message.textContent = 'Registering polling station...';
+
+  try {
+    const { data: sessionData, error: sessionError } =
+      await pollySyncDB.auth.getSession();
+
+    if (sessionError || !sessionData.session) {
+      message.textContent = 'Please sign in again.';
+      return;
+    }
+
+    const userId = sessionData.session.user.id;
+
+    const { data: profile, error: profileError } =
+      await pollySyncDB
+        .from('profiles')
+        .select('campaign_id, role')
+        .eq('id', userId)
+        .single();
+
+    if (profileError || !profile || profile.role !== 'client' || !profile.campaign_id) {
+      message.textContent = 'Your client account has no assigned campaign.';
+      return;
+    }
+
+    const { error: insertError } = await pollySyncDB
+      .from('polling_stations')
+      .insert({
+        campaign_id: profile.campaign_id,
+        station_name: stationName,
+        registered_voters: registeredVoters
+      });
+
+    if (insertError) {
+      console.error('Could not register station:', insertError.message);
+      message.textContent = 'Could not register station: ' + insertError.message;
+      return;
+    }
+
+    message.textContent = 'Polling station registered successfully!';
+    stationInput.value = '';
+    votersInput.value = '';
+
+    if (list) {
+      list.textContent = 'Station saved. The station list will be added next.';
+    }
+  } catch (error) {
+    console.error('Station registration error:', error);
+    message.textContent = 'An unexpected error occurred. Please try again.';
+  }
+}
+
+  async function registerCampaign() {
   const name = document.getElementById('aspirantName').value.trim();
   const area = document.getElementById('campaignArea').value.trim();
   const email = document.getElementById('clientEmail').value.trim();
@@ -542,6 +617,35 @@ const welcome=document.getElementById('welcome');
         <p><strong>Aspirant:</strong> <span id="clientAspirantName">Loading campaign details...</span></p>
         <p><strong>Campaign Area:</strong> <span id="clientCampaignArea">Loading...</span></p>
         <p><strong>Licence Status:</strong> <span id="clientLicenceStatus">Checking...</span></p>
+      </div>
+      
+      
+            <div class="card">
+        <h3>Register Polling Stations</h3>
+        <p class="muted">Add the polling stations for your campaign.</p>
+
+        <label for="newStationName">Polling Station Name</label>
+        <input
+          id="newStationName"
+          type="text"
+          placeholder="Enter polling station name"
+        >
+
+        <label for="newStationVoters">Registered Voters</label>
+        <input
+          id="newStationVoters"
+          type="number"
+          min="0"
+          step="1"
+          placeholder="Enter registered voters"
+        >
+
+        <button type="button" onclick="registerClientStation()">
+          Register Station
+        </button>
+
+        <p id="stationRegistrationMessage" class="muted"></p>
+        <div id="clientStationList">Loading polling stations...</div>
       </div>
       <div class="card">
         <h3>Results &amp; Reports</h3>
