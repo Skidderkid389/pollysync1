@@ -885,6 +885,39 @@ async function loadClientPaymentRequestStatus() {
   }
   }
   
+
+  
+function updateContestLocationFields() {
+  const position = document.getElementById('contestPosition').value;
+  const constituency = document.getElementById('contestConstituency');
+  const ward = document.getElementById('contestWard');
+
+  const constituencyLabel = document.querySelector('label[for="contestConstituency"]');
+  const wardLabel = document.querySelector('label[for="contestWard"]');
+
+  const needsConstituency = position === 'MCA' || position === 'MP';
+  const needsWard = position === 'MCA';
+
+  constituency.disabled = !needsConstituency;
+  constituency.required = needsConstituency;
+  constituencyLabel.style.display = needsConstituency ? '' : 'none';
+  constituency.style.display = needsConstituency ? '' : 'none';
+
+  ward.disabled = !needsWard;
+  ward.required = needsWard;
+  wardLabel.style.display = needsWard ? '' : 'none';
+  ward.style.display = needsWard ? '' : 'none';
+
+  if (!needsConstituency) constituency.value = '';
+  if (!needsWard) ward.value = '';
+}
+
+document.getElementById('contestPosition')
+  .addEventListener('change', updateContestLocationFields);
+
+updateContestLocationFields();
+
+  
 async function registerCampaign() {
   const name = document.getElementById('aspirantName').value.trim();
   const area = document.getElementById('campaignArea').value.trim();
