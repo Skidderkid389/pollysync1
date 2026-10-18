@@ -918,45 +918,120 @@ document.getElementById('contestPosition')
 updateContestLocationFields();
 
   
+
 async function registerCampaign() {
   const name = document.getElementById('aspirantName').value.trim();
-  const area = document.getElementById('campaignArea').value.trim();
+  const position = document.getElementById('contestPosition').value;
+  const county = document.getElementById('contestCounty').value.trim();
+  const constituency = document.getElementById('contestConstituency').value.trim();
+  const ward = document.getElementById('contestWard').value.trim();
   const email = document.getElementById('clientEmail').value.trim();
   const code = document.getElementById('clientCode').value.trim();
   const expiry = document.getElementById('licenceExpiry').value;
   const message = document.getElementById('campaignMessage');
 
-  if (!name || !email || !area || !code || !expiry) {
-    message.textContent = 'Please fill in all fields.';
+  if (!name || !position || !county || !email || !code || !expiry) {
+    message.textContent = 'Please fill in all required fields.';
     return;
+  }
+
+  if ((position === 'MCA' || position === 'MP') && !constituency) {
+    message.textContent = 'Please enter the constituency.';
+    return;
+  }
+
+  if (position === 'MCA' && !ward) {
+    message.textContent = 'Please enter the ward.';
+    return;
+  }
+
+  if (position === 'MCA' && (!constituency || !ward)) {
+    message.textContent = 'MCA campaigns require a constituency and ward.';
+    return;
+  }
+
+  const area = position === 'MCA'
+    ? ward
+    : position === 'MP'
+      ? constituency
+      : county;
+
+  message.textContent = 'Checking electoral contest...';
+
+  const { data: contests, error: listError } =
+    await pollySyncDB.rpc('owner_list_electoral_contests');
+
+  if (listError) {
+    message.textContent = 'Could not check electoral contests: ' + listError.message;
+    return;
+  }
+
+  const normalise = value => (value || '').trim().toLowerCase();
+
+  let contest = contests.find(item =>
+    normalise(item.position) === normalise(position) &&
+    normalise(item.county) === normalise(county) &&
+    normalise(item.constituency) === normalise(
+      position === 'MCA' || position === 'MP' ? constituency : ''
+    ) &&
+    normalise(item.ward) === normalise(position === 'MCA' ? ward : '')
+  );
+
+  if (!contest) {
+    message.textContent = 'Creating electoral contest...';
+
+    const { data: contestId, error: createError } =
+      await pollySyncDB.rpc('owner_create_electoral_contest', {
+        p_position: position,
+        p_county: county,
+        p_constituency: position === 'MCA' || position === 'MP'
+          ? constituency
+          : null,
+        p_ward: position === 'MCA' ? ward : null
+      });
+
+    if (createError) {
+      message.textContent = 'Could not create electoral contest: ' + createError.message;
+      return;
+    }
+
+    contest = { id: contestId };
   }
 
   message.textContent = 'Saving campaign...';
 
-  const { data, error } = await pollySyncDB
+  const { error: campaignError } = await pollySyncDB
     .from('campaigns')
     .insert({
       aspirant_name: name,
       client_email: email,
       campaign_area: area,
       client_code: code,
-      licence_expiry: expiry
-    })
-    .select()
-    .single();
+      licence_expiry: expiry,
+      contest_id: contest.id
+    });
 
-  if (error) {
-    message.textContent = 'Could not save campaign: ' + error.message;
+  if (campaignError) {
+    message.textContent = 'Contest is ready, but campaign was not saved: ' +
+      campaignError.message;
     return;
   }
 
   message.textContent = 'Campaign registered successfully!';
+
   document.getElementById('aspirantName').value = '';
+  document.getElementById('contestPosition').value = '';
+  document.getElementById('contestCounty').value = '';
+  document.getElementById('contestConstituency').value = '';
+  document.getElementById('contestWard').value = '';
+
+  updateContestLocationFields();
+
   document.getElementById('clientEmail').value = '';
-  document.getElementById('campaignArea').value = '';
   document.getElementById('clientCode').value = '';
   document.getElementById('licenceExpiry').value = '';
   }
+  
 
 async function signInToPollySync() {
   const email = document.getElementById('loginEmail').value.trim();
