@@ -924,7 +924,33 @@ openPortal();
   }
   }
 
-    function openPortal(){
+    
+  
+function showOwnerSection(sectionId) {
+  const sections = [
+    'registerSection',
+    'campaignsSection',
+    'billingSection',
+    'paymentsSection',
+    'pricingSection'
+  ];
+
+  sections.forEach(function(id) {
+    const section = document.getElementById(id);
+    if (section) {
+      section.style.display = id === sectionId ? 'block' : 'none';
+    }
+  });
+
+  document.querySelectorAll('.owner-nav button').forEach(function(button) {
+    button.classList.toggle(
+      'active',
+      button.getAttribute('onclick').includes(sectionId)
+    );
+  });
+}
+  
+function openPortal(){
   const role=document.getElementById('role').value;
 
   if (!signedInRole || role !== signedInRole) {
@@ -948,13 +974,24 @@ const welcome=document.getElementById('welcome');
     description.textContent='Manage campaign registrations and platform access.';
     content.innerHTML=`
       
-            <button type="button" onclick="logoutPollySync()" class="logout-button">Logout</button><div class="tiles">
+            
+<button type="button" onclick="logoutPollySync()" class="logout-button">Logout</button>
+
+<div class="owner-nav">
+  <button type="button" onclick="showOwnerSection('registerSection')">Register Campaign</button>
+  <button type="button" onclick="showOwnerSection('campaignsSection')">Campaigns & Licences</button>
+  <button type="button" onclick="showOwnerSection('billingSection')">Stations & Billing</button>
+  <button type="button" onclick="showOwnerSection('paymentsSection')">Payment Requests</button>
+  <button type="button" onclick="showOwnerSection('pricingSection')">Platform Pricing</button>
+</div>
+
+<div class="tiles">
+  
         <div class="tile">Campaigns<strong id="campaignCount">0</strong></div>
-        <div class="tile">Active licences<strong id="activeLicenceCount">0</strong></div>
       </div>
       
       
-      <div class="card">
+      <div class="card owner-section" id="billingSection">
   <h3>Polling Stations & Billing</h3>
   <p class="muted">Station counts, payment status and amounts due will appear here.</p>
   <div id="stationBillingList">Loading station billing...</div>
@@ -963,7 +1000,7 @@ const welcome=document.getElementById('welcome');
 
 
   
-<div class="card">
+<div class="card owner-section" id="paymentsSection">
   <h3>Polling Station Payment Requests</h3>
   <p class="muted">
     Review M-Pesa payments submitted by campaign clients.
@@ -972,7 +1009,7 @@ const welcome=document.getElementById('welcome');
     Loading payment requests...
   </div>
 </div>
-  <div class="card">
+  <div class="card owner-section" id="pricingSection">
   <h3>Platform Pricing</h3>
   <p class="muted">Set the standard fee charged per polling station.</p>
 
@@ -989,14 +1026,14 @@ const welcome=document.getElementById('welcome');
     Save Default Price
   </button>
 
-  <p id="pricingMessage" class="muted"></p>
+    <p id="pricingMessage" class="muted"></p>
 </div>
-</div><div class="card">
+<div class="card owner-section" id="campaignsSection">
   <h3>Registered Campaigns</h3>
   <div id="campaignList">Loading campaigns...</div>
 </div>
 
-<div class="card">
+<div class="card owner-section" id="registerSection">
   <h3>Register a New Campaign</h3>
 
   <label for="aspirantName">Aspirant Full Name</label>
@@ -1019,6 +1056,7 @@ const welcome=document.getElementById('welcome');
     loadCampaignCount();
     loadStationBilling();
     loadOwnerPaymentRequests();
+    showOwnerSection('campaignsSection');
   }else if(role==='client'){
     type.textContent='POLLYSYNC · CAMPAIGN MANAGEMENT';
     title.textContent='Your Campaign Portal';
