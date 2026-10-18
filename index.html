@@ -51,7 +51,55 @@ footer{text-align:center;color:#77859a;font-size:12px;padding:20px}
 .owner-section{
   margin-bottom:12px;
 }
-  .hidden{display:none}
+
+/* Owner profile picture */
+.portal-heading{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.portal-heading h2{
+  flex:1;
+  min-width:0;
+  margin-bottom:0;
+}
+
+#ownerProfileArea{
+  flex-shrink:0;
+}
+
+.profile-upload{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:48px;
+  height:48px;
+  margin:0;
+  border:2px solid #d4dce7;
+  border-radius:50%;
+  background:#edf2f8;
+  cursor:pointer;
+  overflow:hidden;
+}
+
+#ownerProfilePreview{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  height:100%;
+  font-size:24px;
+}
+
+#ownerProfilePreview img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+.hidden{display:none}
 </style>
 </head>
 <body>
@@ -91,7 +139,15 @@ footer{text-align:center;color:#77859a;font-size:12px;padding:20px}
 
   <section class="card hidden" id="portal">
     <p class="muted" id="portalType">POLLYSYNC MANAGEMENT PORTAL</p>
-    <h2 id="portalTitle">Dashboard</h2>
+    <div class="portal-heading">
+  <h2 id="portalTitle">Dashboard</h2>
+  <div id="ownerProfileArea" style="display:none">
+    <label for="ownerProfileFile" class="profile-upload">
+      <span id="ownerProfilePreview">👤</span>
+    </label>
+    <input type="file" id="ownerProfileFile" accept="image/*" hidden>
+  </div>
+    </div>
     <p class="muted" id="portalDescription"></p>
     <div id="portalContent"></div>
     <button class="secondary" onclick="goBack()">Back to portal selection</button>
@@ -967,8 +1023,11 @@ const welcome=document.getElementById('welcome');
   const type=document.getElementById('portalType');
   const description=document.getElementById('portalDescription');
   const content=document.getElementById('portalContent');
+  const ownerProfileArea=document.getElementById('ownerProfileArea');
+if(ownerProfileArea) ownerProfileArea.style.display='none';
 
   if(role==='owner'){
+    if(ownerProfileArea) ownerProfileArea.style.display='block';
     type.textContent='POLLYSYNC · PLATFORM ADMINISTRATION';
     title.textContent='Welcome, Kelvin Kipruto Kemboi!';
     description.textContent='Manage campaign registrations and platform access.';
@@ -1057,6 +1116,64 @@ const welcome=document.getElementById('welcome');
     loadStationBilling();
     loadOwnerPaymentRequests();
     showOwnerSection('campaignsSection');
+    
+    // Owner profile photo
+    const ownerProfileFile = document.getElementById('ownerProfileFile');
+    const ownerProfilePreview = document.getElementById('ownerProfilePreview');
+    const savedOwnerPhoto = localStorage.getItem('pollySyncOwnerProfile');
+
+    if (savedOwnerPhoto && ownerProfilePreview) {
+      ownerProfilePreview.innerHTML =
+        '<img src="' + savedOwnerPhoto + '" alt="Owner profile photo">';
+    }
+
+    if (ownerProfileFile && ownerProfilePreview) {
+      ownerProfileFile.onchange = function() {
+        const file = this.files && this.files[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+          alert('Please choose an image.');
+          return;
+        }
+
+        const reader = new FileReader();
+
+        reader.onload = function(event) {
+          const image = new Image();
+
+          image.onload = function() {
+            const canvas = document.createElement('canvas');
+            const scale = Math.min(
+              1,
+              300 / Math.max(image.width, image.height)
+            );
+
+            canvas.width = Math.round(image.width * scale);
+            canvas.height = Math.round(image.height * scale);
+
+            canvas.getContext('2d').drawImage(
+              image, 0, 0, canvas.width, canvas.height
+            );
+
+            const photoData = canvas.toDataURL('image/jpeg', 0.75);
+
+            try {
+              localStorage.setItem('pollySyncOwnerProfile', photoData);
+              ownerProfilePreview.innerHTML =
+                '<img src="' + photoData + '" alt="Owner profile photo">';
+            } catch (error) {
+              alert('The photo could not be saved. Please choose another image.');
+            }
+          };
+
+          image.src = event.target.result;
+        };
+
+        reader.readAsDataURL(file);
+      };
+    }
+  
   }else if(role==='client'){
     type.textContent='POLLYSYNC · CAMPAIGN MANAGEMENT';
     title.textContent='Your Campaign Portal';
