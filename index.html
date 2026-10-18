@@ -28,7 +28,30 @@ button.cancel-button{background:#fce8e8;color:#a61b1b}
 .tile{background:#f2f6fc;padding:16px;border-radius:11px}
 .tile strong{display:block;font-size:22px;margin-top:7px}
 footer{text-align:center;color:#77859a;font-size:12px;padding:20px}
-.hidden{display:none}
+
+  
+/* Compact Owner Dashboard navigation */
+.owner-nav{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+  margin:12px 0 16px;
+}
+.owner-nav button{
+  width:100%;
+  padding:10px 8px;
+  margin:0;
+  font-size:13px;
+  border-radius:8px;
+}
+.owner-nav button.active{
+  background:#102746;
+  color:white;
+}
+.owner-section{
+  margin-bottom:12px;
+}
+  .hidden{display:none}
 </style>
 </head>
 <body>
