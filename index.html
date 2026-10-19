@@ -561,6 +561,25 @@ async function saveDefaultStationPrice() {
 
     document.getElementById('clientWard').textContent =
       contest?.ward || 'Not applicable';
+    const successBox = document.getElementById('clientContestSuccess');
+
+if (successBox && contest) {
+  document.getElementById('successContestPosition').textContent =
+    contest.position || 'Not specified';
+
+  document.getElementById('successContestCounty').textContent =
+    contest.county || 'Not specified';
+
+  document.getElementById('successContestConstituency').textContent =
+    contest.constituency || 'Not applicable';
+
+  document.getElementById('successContestWard').textContent =
+    contest.ward || 'Not applicable';
+
+  successBox.style.display = 'block';
+} else if (successBox) {
+  successBox.style.display = 'none';
+  }
   
 
     
@@ -1343,6 +1362,14 @@ if(ownerProfileArea) ownerProfileArea.style.display='none';
   <p class="muted">Your campaign information is intended for authorised users only.</p>
 </div>
   <h3>My Campaign</h3>
+  <div id="clientContestSuccess" class="tile" style="display:none;">
+  <h4>Congratulations you been linked successfully</h4>
+  <p>Your campaign is linked to the following electoral contest:</p>
+  <p><strong>Position:</strong> <span id="successContestPosition"></span></p>
+  <p><strong>County:</strong> <span id="successContestCounty"></span></p>
+  <p><strong>Constituency:</strong> <span id="successContestConstituency"></span></p>
+  <p><strong>Ward:</strong> <span id="successContestWard"></span></p>
+</div>
         <p><strong>Aspirant:</strong> <span id="clientAspirantName">Loading campaign details...</span></p>
         <p><strong>Campaign Area:</strong> <span id="clientCampaignArea">Loading...</span></p>
     <p><strong>Electoral Position:</strong> <span id="clientPosition">Loading...</span></p>
