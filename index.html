@@ -1362,14 +1362,20 @@ if(ownerProfileArea) ownerProfileArea.style.display='none';
   <p class="muted">Your campaign information is intended for authorised users only.</p>
 </div>
   <h3>My Campaign</h3>
-  <div id="clientContestSuccess" class="tile" style="display:none;">
-  <h4>Congratulations you been linked successfully</h4>
-  <p>Your campaign is linked to the following electoral contest:</p>
-  <p><strong>Position:</strong> <span id="successContestPosition"></span></p>
-  <p><strong>County:</strong> <span id="successContestCounty"></span></p>
-  <p><strong>Constituency:</strong> <span id="successContestConstituency"></span></p>
-  <p><strong>Ward:</strong> <span id="successContestWard"></span></p>
+  
+<div id="clientContestSuccess" style="display:none; background:linear-gradient(135deg,#dcfce7,#bbf7d0); border:2px solid #22c55e; border-radius:16px; padding:22px 18px; margin:18px 0; box-shadow:0 5px 15px rgba(34,197,94,0.15);">
+  <div style="text-align:center; font-size:38px; margin-bottom:8px;">🎉 🥳 🎉</div>
+  <h3 style="text-align:center; color:#166534; font-size:23px; font-weight:900; margin:8px 0 12px;">CONGRATULATIONS!</h3>
+  <h4 style="text-align:center; color:#14532d; font-size:18px; font-weight:900; line-height:1.5; margin:0 0 16px;">YOU HAVE BEEN LINKED SUCCESSFULLY!</h4>
+  <p style="text-align:center; color:#166534;">Your campaign is now linked to the following electoral contest:</p>
+  <div style="background:#ffffff; border-radius:12px; padding:14px; margin-top:14px; color:#1f2937;">
+    <p><strong>Position:</strong> <span id="successContestPosition"></span></p>
+    <p><strong>County:</strong> <span id="successContestCounty"></span></p>
+    <p><strong>Constituency:</strong> <span id="successContestConstituency"></span></p>
+    <p><strong>Ward:</strong> <span id="successContestWard"></span></p>
+  </div>
 </div>
+  
         <p><strong>Aspirant:</strong> <span id="clientAspirantName">Loading campaign details...</span></p>
         <p><strong>Campaign Area:</strong> <span id="clientCampaignArea">Loading...</span></p>
     <p><strong>Electoral Position:</strong> <span id="clientPosition">Loading...</span></p>
