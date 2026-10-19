@@ -1452,25 +1452,55 @@ if(ownerProfileArea) ownerProfileArea.style.display='none';
     loadClientStations();
     loadStationPaymentQuote();
   }else{
-    type.textContent='POLLYSYNC · POLLING AGENT PORTAL';
-    title.textContent='Agent Portal';
-    description.textContent='Prepare a polling-station result submission.';
-    content.innerHTML=`
-      <label for="station">Polling station</label>
-      <input id="station" placeholder="Enter demo station name">
-      <label for="voters">Registered voters</label>
-      <input id="voters" type="number" min="1" placeholder="Enter registered voters">
-      <label for="candidate">Candidate name</label>
-      <input id="candidate" placeholder="Enter candidate name">
-      <label for="votes">Votes received</label>
-      <input id="votes" type="number" min="0" placeholder="Enter votes">
-      <button onclick="previewResult()">Confirm demo summary</button>
-      <div id="summary"></div>
-      <p class="muted">This preview does not submit or save election data.</p>`;
-  }
-        document.getElementById('loginCard').style.display = 'none';
-  welcome.classList.add('hidden');
-  portal.classList.remove('hidden');
+    
+type.textContent='POLLYSYNC · POLLING AGENT PORTAL';
+title.textContent='Agent Portal';
+description.textContent='Review and submit your assigned polling-station results.';
+content.innerHTML=`
+  <button type="button" onclick="logoutPollySync()" class="logout-button">Logout</button>
+
+  <div class="card">
+    <h3>My Assigned Polling Station</h3>
+    <div id="agentStationDetails">Loading your assigned station...</div>
+    <p id="agentAccessMessage" class="muted"></p>
+  </div>
+
+  <div class="card">
+    <h3>Polling Station Results</h3>
+    <p class="muted">Enter the figures exactly as recorded on the official result form.</p>
+
+    <div id="agentCandidateFields">
+      Loading candidates for your electoral contest...
+    </div>
+
+    <label for="agentValidVotes">Valid votes</label>
+    <input id="agentValidVotes" type="number" min="0" step="1" placeholder="Enter valid votes">
+
+    <label for="agentRejectedVotes">Rejected votes</label>
+    <input id="agentRejectedVotes" type="number" min="0" step="1" placeholder="Enter rejected votes">
+
+    <label for="agentOtherVotes">Other votes</label>
+    <input id="agentOtherVotes" type="number" min="0" step="1" placeholder="Enter other votes">
+
+    <label for="agentPresidingOfficer">Presiding Officer's Full Name</label>
+    <input id="agentPresidingOfficer" type="text" placeholder="As recorded on official paperwork">
+
+    <label for="agentFormReference">Official Result Form Number / Reference</label>
+    <input id="agentFormReference" type="text" placeholder="Enter official form reference">
+
+    <label for="agentNotes">Notes (optional)</label>
+    <textarea id="agentNotes" rows="3" placeholder="Add relevant observations"></textarea>
+
+    <button type="button" id="agentPreviewButton" onclick="previewAgentResult()">
+      Preview Results
+    </button>
+
+    <div id="agentResultsPreview"></div>
+    <div id="agentSubmissionStatus" aria-live="polite"></div>
+    <div id="agentCancellationArea"></div>
+  </div>`;
+    loadAgentDashboard();
+  
 }
 
 function previewResult(){
@@ -1503,6 +1533,517 @@ function goBack(){
     'Please sign in to continue.';
   signedInRole = null;
   }
+  
+async function loadAgentDashboard() {
+  const stationBox = document.getElementById('agentStationDetails');
+  const accessMessage = document.getElementById('agentAccessMessage');
+  const candidateBox = document.getElementById('agentCandidateFields');
+  const previewButton = document.getElementById('agentPreviewButton');
+
+  if (!stationBox || !accessMessage || !candidateBox) return;
+
+  stationBox.textContent = 'Loading your assigned station...';
+  accessMessage.textContent = '';
+  candidateBox.textContent = 'Loading candidates...';
+  previewButton.disabled = true;
+
+  try {
+    const { data, error } = await pollySyncDB.rpc(
+      'get_agent_dashboard_data'
+    );
+
+    if (error) throw error;
+
+    window.agentDashboardData = data;
+
+    if (!data || !data.ok || !data.station) {
+      stationBox.textContent = 'No verified station is available.';
+      accessMessage.textContent =
+        data?.message || 'Please contact the platform owner.';
+      candidateBox.textContent = 'Candidates cannot be loaded yet.';
+      return;
+    }
+
+    const s = data.station;
+
+    stationBox.innerHTML =
+      '<p><strong>Station:</strong> ' + escapeText(s.name || '') + '</p>' +
+      '<p><strong>IEBC code:</strong> ' +
+      escapeText(s.iebc_station_code || 'Not provided') + '</p>' +
+      '<p><strong>County:</strong> ' + escapeText(s.county || 'Not provided') + '</p>' +
+      '<p><strong>Constituency:</strong> ' +
+      escapeText(s.constituency || 'Not provided') + '</p>' +
+      '<p><strong>Ward:</strong> ' + escapeText(s.ward || 'Not provided') + '</p>' +
+      '<p><strong>Registered voters:</strong> ' +
+      Number(s.registered_voters) + '</p>';
+
+    accessMessage.textContent = data.message || '';
+
+    if (!Array.isArray(data.candidates) || data.candidates.length === 0) {
+      candidateBox.textContent = 'No candidates are available for this contest.';
+      return;
+    }
+
+    candidateBox.innerHTML = data.candidates.map(function(candidate) {
+      return '<div class="card">' +
+        '<label for="agentVotes_' + escapeText(candidate.id) + '">' +
+        escapeText(candidate.name) + '</label>' +
+        '<input type="number" min="0" step="1" value="0" ' +
+        'id="agentVotes_' + escapeText(candidate.id) + '" ' +
+        'data-candidate-id="' + escapeText(candidate.id) + '">' +
+        '</div>';
+    }).join('');
+
+    previewButton.disabled = !data.can_submit;
+
+  } catch (error) {
+    console.error('Agent dashboard loading failed:', error);
+    stationBox.textContent = 'Unable to load your assigned station.';
+    accessMessage.textContent =
+      'Please check your connection or contact the platform owner.';
+    candidateBox.textContent = 'Candidate loading failed.';
+  }
+  }
+  
+function previewAgentResult() {
+    if (window.agentSubmissionClientId) {
+    alert(
+      'A report has already been submitted or its status is uncertain. Do not change the figures. Check the existing submission before preparing another report.'
+    );
+    return;
+  }
+  const data = window.agentDashboardData;
+  const preview = document.getElementById('agentResultsPreview');
+
+  if (!data || !data.can_submit || !data.station) {
+    preview.textContent =
+      'Submission is unavailable. Check your station, payment and licence status.';
+    return;
+  }
+
+  const candidates = data.candidates || [];
+  const station = data.station;
+  const registeredVoters = Number(station.registered_voters);
+
+  const validInput = document.getElementById('agentValidVotes').value;
+  const rejectedInput = document.getElementById('agentRejectedVotes').value;
+  const otherInput = document.getElementById('agentOtherVotes').value;
+
+  const validVotes = Number(validInput);
+  const rejectedVotes = Number(rejectedInput);
+  const otherVotes = Number(otherInput);
+
+  const officer = document.getElementById('agentPresidingOfficer').value.trim();
+  const formReference = document.getElementById('agentFormReference').value.trim();
+  const notes = document.getElementById('agentNotes').value.trim();
+
+  const candidateVotes = [];
+  let candidateSum = 0;
+
+  for (const candidate of candidates) {
+    const input = document.getElementById('agentVotes_' + candidate.id);
+
+    if (!input || input.value.trim() === '' ||
+        !Number.isSafeInteger(Number(input.value)) ||
+        Number(input.value) < 0) {
+      preview.textContent =
+        'Enter a valid, non-negative whole number of votes for every candidate.';
+      return;
+    }
+
+    const votes = Number(input.value);
+    candidateSum += votes;
+
+    candidateVotes.push({
+      candidate_id: candidate.id,
+      name: candidate.name,
+      votes: votes
+    });
+  }
+
+  const counts = [
+    [validInput, validVotes],
+    [rejectedInput, rejectedVotes],
+    [otherInput, otherVotes]
+  ];
+
+  if (counts.some(([raw, value]) =>
+      raw.trim() === '' ||
+      !Number.isSafeInteger(value) ||
+      value < 0)) {
+    preview.textContent =
+      'Enter valid, non-negative whole numbers for valid, rejected and other votes.';
+    return;
+  }
+
+  const totalVotes = validVotes + rejectedVotes + otherVotes;
+
+  if (!officer || !formReference) {
+    preview.textContent =
+      'Enter the Presiding Officer’s full name and official result form reference.';
+    return;
+  }
+
+  if (candidateSum !== validVotes) {
+    preview.textContent =
+      'The candidate vote total (' + candidateSum +
+      ') must equal valid votes (' + validVotes + '). Please check the figures.';
+    return;
+  }
+
+  if (totalVotes > registeredVoters) {
+    preview.textContent =
+      'Total votes cannot exceed the registered-voter count of ' +
+      registeredVoters + '.';
+    return;
+  }
+
+  window.agentPreparedSubmission = {
+    station_id: station.id,
+    registered_voters: registeredVoters,
+    candidate_votes: {
+      candidates: candidateVotes.map(c => ({
+        candidate_id: c.candidate_id,
+        votes: c.votes
+      })),
+      valid_votes: validVotes,
+      rejected_votes: rejectedVotes,
+      other_votes: otherVotes
+    },
+    total_votes: totalVotes,
+    notes: notes,
+    presiding_officer_name: officer,
+    official_form_reference: formReference
+  };
+
+  preview.innerHTML =
+    '<div class="notice">' +
+    '<h3>Review Your Results</h3>' +
+    '<p><strong>Station:</strong> ' + escapeText(station.name) + '</p>' +
+    '<p><strong>Registered voters:</strong> ' + registeredVoters + '</p>' +
+    '<h4>Candidate votes</h4>' +
+    candidateVotes.map(c =>
+      '<p>' + escapeText(c.name) + ': <strong>' + c.votes + '</strong></p>'
+    ).join('') +
+    '<p><strong>Valid votes:</strong> ' + validVotes + '</p>' +
+    '<p><strong>Rejected votes:</strong> ' + rejectedVotes + '</p>' +
+    '<p><strong>Other votes:</strong> ' + otherVotes + '</p>' +
+    '<p><strong>Total votes:</strong> ' + totalVotes + '</p>' +
+    '<p><strong>Presiding Officer:</strong> ' + escapeText(officer) + '</p>' +
+    '<p><strong>Official form reference:</strong> ' +
+    escapeText(formReference) + '</p>' +
+    (notes ? '<p><strong>Notes:</strong> ' + escapeText(notes) + '</p>' : '') +
+    '<p>Check every figure against the official result form before continuing.</p>' +
+    '<button type="button" onclick="submitAgentResult()">Submit Report</button>' +
+    '</div>';
+  }
+
+  
+async function submitAgentResult() {
+  const prepared = window.agentPreparedSubmission;
+  const preview = document.getElementById('agentResultsPreview');
+  const statusBox = document.getElementById('agentSubmissionStatus');
+
+  if (!prepared || !preview || !statusBox) {
+    alert('Please preview your results before submitting.');
+    return;
+  }
+
+  if (window.agentSubmissionInProgress) return;
+
+    if (window.agentSubmissionId) {
+    window.agentSubmissionInProgress = true;
+
+    try {
+      const { data, error } = await pollySyncDB.rpc(
+        'get_result_submission_status',
+        {
+          p_submission_id: window.agentSubmissionId
+        }
+      );
+
+      if (error) throw error;
+
+      if (!data || !data.status) {
+        throw new Error('The server did not confirm the report status.');
+      }
+
+      if (data.status === 'pending') {
+        window.agentCancellationDeadline =
+          data.cancellation_deadline;
+
+        document.getElementById('agentSubmissionStatus').textContent =
+          'Your existing report is still pending. Recovering its cancellation window.';
+
+        await showAgentCancellationWindow();
+        return;
+      }
+
+      document.getElementById('agentSubmissionStatus').textContent =
+        'Existing report status: ' + data.status +
+        '. Do not submit another report until this status is resolved.';
+
+      return;
+
+    } catch (error) {
+      document.getElementById('agentSubmissionStatus').textContent =
+        'Could not recover the existing report. Keep this page open and do not submit another report yet.';
+
+      return;
+
+    } finally {
+      window.agentSubmissionInProgress = false;
+    }
+  }
+
+  window.agentSubmissionInProgress = true;
+
+  const buttons = preview.querySelectorAll('button');
+  buttons.forEach(button => button.disabled = true);
+
+  statusBox.textContent = 'Sending report securely to the server...';
+
+  try {
+    // Reuse the same ID if this submission needs to be retried.
+    if (!window.agentSubmissionClientId) {
+      window.agentSubmissionClientId =
+        (typeof crypto !== 'undefined' &&
+         typeof crypto.randomUUID === 'function')
+          ? crypto.randomUUID()
+          : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+              const r = Math.random() * 16 | 0;
+              const v = c === 'x' ? r : (r & 0x3 | 0x8);
+              return v.toString(16);
+            });
+    }
+
+    const requestStartedAt = Date.now();
+
+    const { data, error } = await pollySyncDB.rpc(
+      'receive_result_submission',
+      {
+        p_client_submission_id: window.agentSubmissionClientId,
+        p_station_id: prepared.station_id,
+        p_registered_voters: prepared.registered_voters,
+        p_candidate_votes: prepared.candidate_votes,
+        p_total_votes: prepared.total_votes,
+        p_notes: prepared.notes || null,
+        p_presiding_officer_name: prepared.presiding_officer_name,
+        p_official_form_reference: prepared.official_form_reference
+      }
+    );
+
+    if (error) throw error;
+
+    if (!data || !data.submission_id || !data.cancellation_deadline) {
+      throw new Error('The server response was incomplete. Check report status before retrying.');
+    }
+
+    window.agentSubmissionId = data.submission_id;
+    window.agentCancellationDeadline = data.cancellation_deadline;
+
+    // Estimate the server clock offset from the server receipt timestamp.
+    window.agentServerClockOffset =
+      Date.parse(data.server_received_at) -
+      (requestStartedAt + Date.now()) / 2;
+
+    statusBox.textContent = 'Checking the server-confirmed report status...';
+
+    const { data: statusData, error: statusError } =
+      await pollySyncDB.rpc('get_result_submission_status', {
+        p_submission_id: data.submission_id
+      });
+
+    if (statusError) throw statusError;
+
+    if (!statusData || !statusData.status) {
+      throw new Error('Could not confirm the current report status.');
+    }
+
+        if (statusData.status === 'cancelled') {
+      statusBox.textContent =
+        'This report was cancelled. Review your figures before starting again.';
+
+      window.agentSubmissionId = null;
+      window.agentSubmissionClientId = null;
+      window.agentPreparedSubmission = null;
+
+      buttons.forEach(button => button.disabled = false);
+      return;
+    }
+
+        if (statusData.status !== 'pending') {
+      statusBox.textContent =
+        'Server report status: ' + statusData.status +
+        '. The report is not awaiting cancellation.';
+
+      buttons.forEach(button => button.disabled = false);
+      return;
+    }
+
+    window.agentCancellationDeadline = statusData.cancellation_deadline;
+
+    statusBox.textContent =
+      'Server received your report. The 60-second cancellation window is active.';
+
+    showAgentCancellationWindow();
+
+      } catch (error) {
+    console.error('Report submission error:', error);
+
+    statusBox.textContent =
+      'We could not confirm the report status. Check your connection and check the existing submission before trying again. Keep this page open so the same submission ID can be reused.';
+        buttons.forEach(button => button.disabled = false);
+    
+
+  } finally {
+    window.agentSubmissionInProgress = false;
+     }
+  }
+  
+let agentCancellationTimer = null;
+
+async function showAgentCancellationWindow() {
+  const area = document.getElementById('agentCancellationArea');
+  const statusBox = document.getElementById('agentSubmissionStatus');
+
+  if (!area || !window.agentSubmissionId ||
+      !window.agentCancellationDeadline) {
+    return;
+  }
+
+  if (agentCancellationTimer) {
+    clearInterval(agentCancellationTimer);
+    agentCancellationTimer = null;
+  }
+
+  area.innerHTML =
+    '<p id="agentCancellationCountdown"></p>' +
+    '<button type="button" id="agentCancelSubmissionButton" ' +
+    'onclick="cancelAgentSubmission()">Cancel Submission</button>';
+
+  const countdown = document.getElementById('agentCancellationCountdown');
+  const cancelButton = document.getElementById('agentCancelSubmissionButton');
+
+  let checkingStatus = false;
+
+  async function refreshCountdown() {
+    if (checkingStatus) return;
+
+    const deadline = Date.parse(window.agentCancellationDeadline);
+    const serverNow = Date.now() +
+      (window.agentServerClockOffset || 0);
+    const secondsLeft = Math.max(0, Math.ceil((deadline - serverNow) / 1000));
+
+    if (secondsLeft > 0) {
+      countdown.textContent =
+        'Cancellation available for ' + secondsLeft + ' more seconds.';
+      return;
+    }
+
+    checkingStatus = true;
+    cancelButton.disabled = true;
+    countdown.textContent = 'Checking whether the report is now locked...';
+
+    try {
+      const { data, error } = await pollySyncDB.rpc(
+        'get_result_submission_status',
+        { p_submission_id: window.agentSubmissionId }
+      );
+
+      if (error) throw error;
+
+      if (data.status === 'pending' && data.cancellation_allowed) {
+        countdown.textContent =
+          'The server still allows cancellation. Please try Cancel Submission now.';
+        cancelButton.disabled = false;
+        checkingStatus = false;
+        return;
+      }
+
+      if (agentCancellationTimer) {
+        clearInterval(agentCancellationTimer);
+        agentCancellationTimer = null;
+      }
+
+      area.textContent = '';
+      statusBox.textContent =
+        'Server report status: ' + data.status +
+        '. The cancellation window has ended or the report is no longer pending.';
+
+    } catch (error) {
+      console.error('Report status check failed:', error);
+      countdown.textContent =
+        'Could not confirm the status because of a connection problem. Reconnect and check again.';
+      cancelButton.disabled = false;
+      checkingStatus = false;
+    }
+  }
+
+  await refreshCountdown();
+
+  if (document.getElementById('agentCancellationCountdown')) {
+    agentCancellationTimer = setInterval(refreshCountdown, 1000);
+  }
+}
+
+async function cancelAgentSubmission() {
+  const area = document.getElementById('agentCancellationArea');
+  const statusBox = document.getElementById('agentSubmissionStatus');
+  const cancelButton = document.getElementById('agentCancelSubmissionButton');
+
+  if (!window.agentSubmissionId || !area || !statusBox) return;
+
+  if (cancelButton) cancelButton.disabled = true;
+  statusBox.textContent = 'Requesting cancellation from the server...';
+
+  try {
+    const { data, error } = await pollySyncDB.rpc(
+      'cancel_result_submission',
+      { p_submission_id: window.agentSubmissionId }
+    );
+
+    if (error) throw error;
+
+    if (data.status === 'cancelled') {
+      if (agentCancellationTimer) {
+        clearInterval(agentCancellationTimer);
+        agentCancellationTimer = null;
+      }
+
+      area.textContent = '';
+      statusBox.textContent =
+        'The server confirmed cancellation. You can correct the figures and preview a new report.';
+
+      window.agentSubmissionId = null;
+      window.agentSubmissionClientId = null;
+      window.agentPreparedSubmission = null;
+
+      const preview = document.getElementById('agentResultsPreview');
+      if (preview) preview.textContent = '';
+
+      const previewButton = document.getElementById('agentPreviewButton');
+      if (previewButton) previewButton.disabled = false;
+
+      return;
+    }
+
+    statusBox.textContent =
+      'The server did not cancel the report. Current status: ' +
+      (data.status || 'unknown') + '.';
+
+    if (data.status === 'pending' && cancelButton) {
+      cancelButton.disabled = false;
+    }
+
+  } catch (error) {
+    console.error('Cancellation request failed:', error);
+    statusBox.textContent =
+      'Cancellation could not be confirmed. Reconnect and check the report status before trying again.';
+    if (cancelButton) cancelButton.disabled = false;
+  }  
+}
+  
 
   async function logoutPollySync() {
   const { error } = await pollySyncDB.auth.signOut();
