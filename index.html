@@ -529,7 +529,7 @@ async function saveDefaultStationPrice() {
     const { data: campaign, error: campaignError } =
       await pollySyncDB
         .from('campaigns')
-        .select('aspirant_name, campaign_area, licence_expiry, active')
+        .select('aspirant_name, campaign_area, licence_expiry, active, contest_id')
         .eq('id', profile.campaign_id)
         .single();
 
@@ -539,6 +539,26 @@ async function saveDefaultStationPrice() {
       statusElement.textContent = 'Unavailable';
       return;
     }
+    
+    const { data: contests, error: contestError } =
+      await pollySyncDB.rpc('client_get_my_electoral_contest');
+
+    const contest = contests && contests.length > 0
+      ? contests[0]
+      : null;
+
+    document.getElementById('clientPosition').textContent =
+      contest?.position || 'Not linked yet';
+
+    document.getElementById('clientCounty').textContent =
+      contest?.county || 'Not linked yet';
+
+    document.getElementById('clientConstituency').textContent =
+      contest?.constituency || 'Not applicable';
+
+    document.getElementById('clientWard').textContent =
+      contest?.ward || 'Not applicable';
+  
 
     
     nameElement.textContent =
@@ -573,7 +593,6 @@ async function saveDefaultStationPrice() {
     statusElement.textContent = 'Unavailable';
   }
 }
-
   
   
 async function registerClientStation() {
@@ -1323,6 +1342,10 @@ if(ownerProfileArea) ownerProfileArea.style.display='none';
   <h3>My Campaign</h3>
         <p><strong>Aspirant:</strong> <span id="clientAspirantName">Loading campaign details...</span></p>
         <p><strong>Campaign Area:</strong> <span id="clientCampaignArea">Loading...</span></p>
+    <p><strong>Electoral Position:</strong> <span id="clientPosition">Loading...</span></p>
+<p><strong>County:</strong> <span id="clientCounty">Loading...</span></p>
+<p><strong>Constituency:</strong> <span id="clientConstituency">Loading...</span></p>
+<p><strong>Ward:</strong> <span id="clientWard">Loading...</span></p>
         <p><strong>Licence Status:</strong> <span id="clientLicenceStatus">Checking...</span></p>
       </div>
       
