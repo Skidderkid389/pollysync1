@@ -195,7 +195,7 @@ height:120px;
   
     const { data: campaigns, error: listError } = await pollySyncDB
     .from('campaigns')
-    .select('id, aspirant_name, client_email, campaign_area, licence_expiry, active')
+    .select('id, aspirant_name, client_email, campaign_area, licence_expiry, active, contest_id')
     .order('created_at', { ascending: false });
 
   const listElement = document.getElementById('campaignList');
@@ -224,7 +224,9 @@ height:120px;
             <p>Status: ${valid ? 'Active' : 'Expired / Inactive'}</p>
                         ${campaign.active ? '<button type="button" onclick="activateCampaignLicence(\'' + campaign.id + '\')">Activate / Renew Licence</button>' : ''}
             ${campaign.client_email ? '<button type="button" onclick="inviteClient(\'' + campaign.id + '\')">Invite Client</button>' : '<p>No client email saved.</p>'}
-            <button type="button" onclick="linkCampaignContest('${campaign.id}')">Link Electoral Contest</button>
+            ${campaign.contest_id
+  ? '<p class="muted">Electoral Contest: Linked</p>'
+  : '<button type="button" onclick="linkCampaignContest(\'' + campaign.id + '\')">Link Electoral Contest</button>'}
           </div>
         `;
                   }).join('');
