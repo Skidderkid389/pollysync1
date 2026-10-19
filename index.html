@@ -224,6 +224,7 @@ height:120px;
             <p>Status: ${valid ? 'Active' : 'Expired / Inactive'}</p>
                         ${campaign.active ? '<button type="button" onclick="activateCampaignLicence(\'' + campaign.id + '\')">Activate / Renew Licence</button>' : ''}
             ${campaign.client_email ? '<button type="button" onclick="inviteClient(\'' + campaign.id + '\')">Invite Client</button>' : '<p>No client email saved.</p>'}
+            <button type="button" onclick="linkCampaignContest('${campaign.id}')">Link Electoral Contest</button>
           </div>
         `;
                   }).join('');
@@ -1545,6 +1546,90 @@ async function activateCampaignLicence(campaignId) {
     alert('Could not update the licence: ' + error.message);
   }
   }
+
+  
+async function linkCampaignContest(campaignId) {
+  const position = prompt(
+    'Enter electoral position (MCA, MP, Senator, Women Representative, Governor):'
+  );
+
+  if (position === null) return;
+
+  const county = prompt('Enter county:');
+  if (county === null) return;
+
+  const constituency = prompt(
+    'Enter constituency (leave blank if not applicable):'
+  );
+  if (constituency === null) return;
+
+  const ward = prompt(
+    'Enter ward (leave blank if not applicable):'
+  );
+  if (ward === null) return;
+
+  if (!position.trim() || !county.trim()) {
+    alert('Position and county are required.');
+    return;
+  }
+
+  if (
+    position.trim().toLowerCase() === 'mca' &&
+    (!constituency.trim() || !ward.trim())
+  ) {
+    alert('MCA requires a constituency and ward.');
+    return;
+  }
+
+  if (
+    position.trim().toLowerCase() === 'mp' &&
+    !constituency.trim()
+  ) {
+    alert('MP requires a constituency.');
+    return;
+  }
+
+  if (!confirm(
+    'Link this campaign to:\n' +
+    position.trim() + '\n' +
+    county.trim() + '\n' +
+    (constituency.trim() || 'No constituency') + '\n' +
+    (ward.trim() || 'No ward') + '\n\nContinue?'
+  )) {
+    return;
+  }
+
+  try {
+    const { data: sessionData } =
+      await pollySyncDB.auth.getSession();
+
+    if (!sessionData?.session) {
+      alert('Please sign in again.');
+      return;
+    }
+
+    const { data, error } = await pollySyncDB.rpc(
+      'owner_link_campaign_electoral_contest',
+      {
+        p_campaign_id: campaignId,
+        p_position: position.trim(),
+        p_county: county.trim(),
+        p_constituency: constituency.trim() || null,
+        p_ward: ward.trim() || null
+      }
+    );
+
+    if (error) throw error;
+
+    alert('Electoral contest linked successfully!');
+    await loadCampaignCount();
+
+  } catch (error) {
+    console.error('Campaign linking failed:', error);
+    alert('Could not link electoral contest: ' + error.message);
+  }
+  }
+  
   
   
 async function cancelCampaign(campaignId) {
