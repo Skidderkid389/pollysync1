@@ -1639,8 +1639,8 @@ async function recoverAgentSubmission() {
   }
 
   try {
-    const { data, error } = await pollySyncDB.rpc(
-      'get_agent_submission_by_client_id',
+    let { data, error } = await pollySyncDB.rpc(
+  'get_agent_submission_by_client_id',
       {
         p_client_submission_id: saved.client_submission_id
       }
@@ -1705,11 +1705,23 @@ async function recoverAgentSubmission() {
         JSON.stringify(saved)
       );
 
-      if (retryData.server_received_at) {
+                  if (retryData.server_received_at) {
         window.agentServerClockOffset =
           Date.parse(retryData.server_received_at) -
           (retryStartedAt + Date.now()) / 2;
       }
+            window.agentSubmissionId = retryData.submission_id;
+      window.agentCancellationDeadline =
+        retryData.cancellation_deadline;
+
+      saved.submission_id = retryData.submission_id;
+      saved.cancellation_deadline =
+        retryData.cancellation_deadline;
+
+      localStorage.setItem(
+        'pollySyncAgentPendingSubmission',
+        JSON.stringify(saved)
+      );
 
       const { data: retryStatus, error: retryStatusError } =
         await pollySyncDB.rpc('get_result_submission_status', {
