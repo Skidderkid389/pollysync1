@@ -1648,14 +1648,119 @@ async function recoverAgentSubmission() {
 
     if (error) throw error;
 
-        if (!data || !data.found) {
-      if (statusBox) {
-        statusBox.textContent =
-          'No matching report was found. Your saved report is being retained. Do not change the figures or start a new report. Reconnect and check again.';
+        
+    if (!data || !data.found) {
+      const p = saved.payload;
+
+      if (!p || !p.station_id || !p.candidate_votes) {
+        if (statusBox) {
+          statusBox.textContent =
+            'Saved report data is incomplete. Do not submit another report.';
+        }
+        return;
       }
 
+      if (statusBox) {
+        statusBox.textContent =
+          'Retrying the saved report with the same ID and figures...';
+      }
+
+      const retryStartedAt = Date.now();
+
+      const { data: retryData, error: retryError } =
+        await pollySyncDB.rpc('receive_result_submission', {
+          p_client_submission_id: saved.client_submission_id,
+          p_station_id: p.station_id,
+          p_registered_voters: p.registered_voters,
+          p_candidate_votes: p.candidate_votes,
+          p_total_votes: p.total_votes,
+          p_notes: p.notes || null,
+          p_presiding_officer_name: p.presiding_officer_name,
+          p_official_form_reference: p.official_form_reference
+        });
+
+      if (retryError) throw retryError;
+
+      if (
+        !retryData ||
+        !retryData.submission_id ||
+        !retryData.cancellation_deadline
+      ) {
+        throw new Error(
+          'The server response was incomplete. Keep the saved report.'
+        );
+      }
+
+      window.agentSubmissionId = retryData.submission_id;
+      window.agentCancellationDeadline =
+        retryData.cancellation_deadline;
+
+      saved.submission_id = retryData.submission_id;
+      saved.cancellation_deadline =
+        retryData.cancellation_deadline;
+      saved.status = retryData.status;
+
+      localStorage.setItem(
+        'pollySyncAgentPendingSubmission',
+        JSON.stringify(saved)
+      );
+
+      if (retryData.server_received_at) {
+        window.agentServerClockOffset =
+          Date.parse(retryData.server_received_at) -
+          (retryStartedAt + Date.now()) / 2;
+      }
+
+      const { data: retryStatus, error: retryStatusError } =
+        await pollySyncDB.rpc('get_result_submission_status', {
+          p_submission_id: retryData.submission_id
+        });
+
+      if (retryStatusError) throw retryStatusError;
+
+      if (
+        retryStatus &&
+        retryStatus.status === 'pending' &&
+        retryStatus.cancellation_allowed
+      ) {
+        if (statusBox) {
+          statusBox.textContent =
+            'Server confirmed the existing report. Its cancellation window is available.';
+        }
+
+        await showAgentCancellationWindow();
+        return;
+      }
+
+      if (
+        retryStatus &&
+        retryStatus.status === 'cancelled'
+      ) {
+        localStorage.removeItem('pollySyncAgentPendingSubmission');
+        window.agentSubmissionId = null;
+        window.agentSubmissionClientId = null;
+        window.agentPreparedSubmission = null;
+
+        const previewButton =
+          document.getElementById('agentPreviewButton');
+        if (previewButton) previewButton.disabled = false;
+
+        if (statusBox) {
+          statusBox.textContent =
+            'The server confirms the report was cancelled. Review the figures before preparing another report.';
+        }
+        return;
+      }
+
+      if (statusBox) {
+        statusBox.textContent =
+          'Server report status: ' +
+          (retryStatus?.status || 'unconfirmed') +
+          '. Keep the saved report and do not submit another.';
+      }
       return;
   }
+  
 
     window.agentSubmissionId = data.submission_id;
     window.agentCancellationDeadline = data.cancellation_deadline;
