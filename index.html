@@ -953,10 +953,14 @@ function updateContestLocationFields() {
   if (!needsWard) ward.value = '';
 }
 
-document.getElementById('contestPosition')
-  .addEventListener('change', updateContestLocationFields);
+function initialiseContestLocationFields() {
+  const position = document.getElementById('contestPosition');
 
-updateContestLocationFields();
+  if (!position) return;
+
+  position.addEventListener('change', updateContestLocationFields);
+  updateContestLocationFields();
+  }
 
   
 
@@ -1279,6 +1283,7 @@ if(ownerProfileArea) ownerProfileArea.style.display='none';
   <button type="button" onclick="registerCampaign()">Register Campaign</button>
   <p id="campaignMessage" class="muted"></p>
 </div>`;
+    initialiseContestLocationFields();
     loadCampaignCount();
     loadStationBilling();
     loadOwnerPaymentRequests();
