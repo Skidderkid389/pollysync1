@@ -1596,6 +1596,9 @@ async function loadAgentDashboard() {
 
     previewButton.disabled = !data.can_submit;
 
+    await recoverAgentSubmission();
+    if (window.agentSubmissionClientId) previewButton.disabled = true;
+
   } catch (error) {
     console.error('Agent dashboard loading failed:', error);
     stationBox.textContent = 'Unable to load your assigned station.';
@@ -1604,6 +1607,117 @@ async function loadAgentDashboard() {
     candidateBox.textContent = 'Candidate loading failed.';
   }
   }
+
+  
+async function recoverAgentSubmission() {
+  const statusBox = document.getElementById('agentSubmissionStatus');
+  const savedText = localStorage.getItem(
+    'pollySyncAgentPendingSubmission'
+  );
+
+  if (!savedText) return;
+
+  let saved;
+
+  try {
+    saved = JSON.parse(savedText);
+  } catch (error) {
+    if (statusBox) {
+      statusBox.textContent =
+        'Saved report recovery details are unreadable. Do not submit another report.';
+    }
+    return;
+  }
+
+  if (!saved.client_submission_id) return;
+
+  window.agentSubmissionClientId = saved.client_submission_id;
+  window.agentPreparedSubmission = saved.payload || null;
+
+  if (statusBox) {
+    statusBox.textContent = 'Checking your existing report with the server...';
+  }
+
+  try {
+    const { data, error } = await pollySyncDB.rpc(
+      'get_agent_submission_by_client_id',
+      {
+        p_client_submission_id: saved.client_submission_id
+      }
+    );
+
+    if (error) throw error;
+
+    if (!data || !data.found) {
+      if (statusBox) {
+        statusBox.textContent =
+          'The server has not confirmed this report. Keep the saved details and do not create a new report.';
+      }
+      return;
+    }
+
+    window.agentSubmissionId = data.submission_id;
+    window.agentCancellationDeadline = data.cancellation_deadline;
+
+    saved.submission_id = data.submission_id;
+    saved.cancellation_deadline = data.cancellation_deadline;
+    saved.status = data.status;
+
+    localStorage.setItem(
+      'pollySyncAgentPendingSubmission',
+      JSON.stringify(saved)
+    );
+
+        if (data.status === 'pending') {
+      const { data: currentStatus, error: statusError } =
+        await pollySyncDB.rpc(
+          'get_result_submission_status',
+          {
+            p_submission_id: data.submission_id
+          }
+        );
+
+      if (statusError) throw statusError;
+
+      if (
+        currentStatus &&
+        currentStatus.status === 'pending' &&
+        currentStatus.cancellation_allowed
+      ) {
+        if (statusBox) {
+          statusBox.textContent =
+            'Existing report recovered. The server confirms cancellation is still available.';
+        }
+
+        await showAgentCancellationWindow();
+        return;
+      }
+
+      if (statusBox) {
+        statusBox.textContent =
+          'The server reports status: ' +
+          (currentStatus?.status || 'unconfirmed') +
+          '. Do not submit another report.';
+      }
+
+      return;
+    }
+
+    if (statusBox) {
+      statusBox.textContent =
+        'Existing report status: ' + data.status +
+        '. Do not submit another report.';
+    }
+  } catch (error) {
+    console.error('Submission recovery failed:', error);
+
+    if (statusBox) {
+      statusBox.textContent =
+        'Could not verify the existing report. Keep this page open and do not submit another report.';
+    }
+  }
+}
+  
   
 function previewAgentResult() {
     if (window.agentSubmissionClientId) {
@@ -1740,16 +1854,50 @@ function previewAgentResult() {
 
   
 async function submitAgentResult() {
+  
   const prepared = window.agentPreparedSubmission;
   const preview = document.getElementById('agentResultsPreview');
   const statusBox = document.getElementById('agentSubmissionStatus');
+
+  if (window.agentSubmissionInProgress) return;
+
+  // Restore saved report details after a page reload.
+  const savedText = localStorage.getItem(
+    'pollySyncAgentPendingSubmission'
+  );
+
+  if (!window.agentSubmissionClientId && savedText) {
+    try {
+      const saved = JSON.parse(savedText);
+
+      if (saved.client_submission_id) {
+        window.agentSubmissionClientId =
+          saved.client_submission_id;
+        window.agentPreparedSubmission = saved.payload || null;
+        window.agentSubmissionId = saved.submission_id || null;
+        window.agentCancellationDeadline =
+          saved.cancellation_deadline || null;
+      }
+    } catch (error) {
+      if (statusBox) {
+        statusBox.textContent =
+          'Saved report details could not be read. Do not submit another report.';
+      }
+      return;
+    }
+  }
+
+  // Recover any saved attempt before allowing a new submission.
+  if (window.agentSubmissionClientId) {
+    await recoverAgentSubmission();
+    return;
+  }
 
   if (!prepared || !preview || !statusBox) {
     alert('Please preview your results before submitting.');
     return;
   }
-
-  if (window.agentSubmissionInProgress) return;
+  
 
     if (window.agentSubmissionId) {
     window.agentSubmissionInProgress = true;
@@ -1815,7 +1963,15 @@ async function submitAgentResult() {
               const v = c === 'x' ? r : (r & 0x3 | 0x8);
               return v.toString(16);
             });
+  
     }
+        localStorage.setItem(
+      'pollySyncAgentPendingSubmission',
+      JSON.stringify({
+        client_submission_id: window.agentSubmissionClientId,
+        payload: prepared
+      })
+    );
 
     const requestStartedAt = Date.now();
 
@@ -1841,6 +1997,17 @@ async function submitAgentResult() {
 
     window.agentSubmissionId = data.submission_id;
     window.agentCancellationDeadline = data.cancellation_deadline;
+        const savedSubmission = JSON.parse(
+      localStorage.getItem('pollySyncAgentPendingSubmission') || '{}'
+    );
+
+    savedSubmission.submission_id = data.submission_id;
+    savedSubmission.cancellation_deadline = data.cancellation_deadline;
+
+    localStorage.setItem(
+      'pollySyncAgentPendingSubmission',
+      JSON.stringify(savedSubmission)
+    );
 
     // Estimate the server clock offset from the server receipt timestamp.
     window.agentServerClockOffset =
@@ -1867,6 +2034,7 @@ async function submitAgentResult() {
       window.agentSubmissionId = null;
       window.agentSubmissionClientId = null;
       window.agentPreparedSubmission = null;
+                localStorage.removeItem('pollySyncAgentPendingSubmission');
 
       buttons.forEach(button => button.disabled = false);
       return;
@@ -1893,7 +2061,7 @@ async function submitAgentResult() {
 
     statusBox.textContent =
       'We could not confirm the report status. Check your connection and check the existing submission before trying again. Keep this page open so the same submission ID can be reused.';
-        buttons.forEach(button => button.disabled = false);
+        buttons.forEach(button => button.disabled = true);
     
 
   } finally {
@@ -2018,6 +2186,7 @@ async function cancelAgentSubmission() {
       window.agentSubmissionId = null;
       window.agentSubmissionClientId = null;
       window.agentPreparedSubmission = null;
+            localStorage.removeItem('pollySyncAgentPendingSubmission');
 
       const preview = document.getElementById('agentResultsPreview');
       if (preview) preview.textContent = '';
