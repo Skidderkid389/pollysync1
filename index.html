@@ -2728,6 +2728,143 @@ async function inviteClient(campaignId) {
     message.textContent = 'Connection failed. Please check your internet and try again.';
   }
 }
+    
+async function invitePollingAgent() {
+  const emailInput = document.getElementById('agentInviteEmail');
+  const stationSelect = document.getElementById('agentInviteStation');
+  const message = document.getElementById('agentInvitationMessage');
+  const button = document.getElementById('invitePollingAgentButton');
+
+  if (!emailInput || !stationSelect || !message || !button) {
+    alert('The agent invitation form could not be found.');
+    return;
+  }
+
+  const email = emailInput.value.trim().toLowerCase();
+  const stationId = stationSelect.value;
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    message.textContent = 'Please enter a valid agent email address.';
+    return;
+  }
+
+  const { data: sessionData, error: sessionError } =
+    await pollySyncDB.auth.getSession();
+
+  const session = sessionData?.session;
+
+  if (sessionError || !session) {
+    message.textContent = 'Please sign in again before inviting an agent.';
+    return;
+  }
+
+  // Load this client's own polling stations if none are loaded yet.
+  if (!stationId) {
+    message.textContent = 'Loading your polling stations...';
+    button.disabled = true;
+
+    try {
+      const { data: profile, error: profileError } =
+        await pollySyncDB
+          .from('profiles')
+          .select('campaign_id, role')
+          .eq('id', session.user.id)
+          .maybeSingle();
+
+      if (
+        profileError ||
+        !profile ||
+        profile.role !== 'client' ||
+        !profile.campaign_id
+      ) {
+        message.textContent =
+          'Could not verify your client campaign. Please sign in again.';
+        return;
+      }
+
+      const { data: stations, error: stationsError } =
+        await pollySyncDB
+          .from('polling_stations')
+          .select('id, station_name')
+          .eq('campaign_id', profile.campaign_id)
+          .order('station_name');
+
+      if (stationsError) {
+        message.textContent =
+          'Could not load polling stations. Please try again.';
+        return;
+      }
+
+      stationSelect.replaceChildren();
+
+      const firstOption = document.createElement('option');
+      firstOption.value = '';
+      firstOption.textContent = stations?.length
+        ? 'Select a polling station'
+        : 'No polling stations registered';
+      stationSelect.appendChild(firstOption);
+
+      for (const station of stations || []) {
+        const option = document.createElement('option');
+        option.value = station.id;
+        option.textContent = station.station_name;
+        stationSelect.appendChild(option);
+      }
+
+      message.textContent = stations?.length
+        ? 'Choose a polling station, then tap Invite Agent again.'
+        : 'Register a polling station before inviting an agent.';
+    } catch (error) {
+      message.textContent =
+        'Could not load polling stations. Please check your connection.';
+    } finally {
+      button.disabled = false;
+    }
+
+    return;
+  }
+
+  if (!confirm(
+    'Invite ' + email + ' to report results for the selected polling station?'
+  )) {
+    return;
+  }
+
+  button.disabled = true;
+  message.textContent = 'Sending agent invitation...';
+
+  try {
+    const response = await fetch(
+      'https://oeerrqyapjnbffunihpa.supabase.co/functions/v1/pollysync-agent-invite',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + session.access_token,
+          'apikey': 'sb_publishable_Wdy1sItW10VIz4g1dhuthA_mjHGUIPg'
+        },
+        body: JSON.stringify({
+          email: email,
+          station_id: stationId
+        })
+      }
+    );
+
+    const result = await response.json();
+
+    message.textContent = response.ok && result.success
+      ? 'Agent invitation sent successfully for ' +
+        (result.station_name || 'the selected station') + '.'
+      : 'Invitation not completed: ' +
+        (result.error || result.message || 'Please check the function logs.');
+  } catch (error) {
+    message.textContent =
+      'Connection failed. Please check your internet and try again.';
+  } finally {
+    button.disabled = false;
+  }
+    }
+    
   </script>
   
   
