@@ -1414,6 +1414,38 @@ if(ownerProfileArea) ownerProfileArea.style.display='none';
         <div id="clientStationList">Loading polling stations...</div>
       </div>
       
+<div class="card">
+  <h3>Manage Polling Agents</h3>
+  <p class="muted">
+    Invite an authorised agent to report results for one of your registered polling stations.
+  </p>
+
+  <label for="agentInviteEmail">Agent Email Address</label>
+  <input
+    id="agentInviteEmail"
+    type="email"
+    placeholder="Enter agent email address"
+    autocomplete="email"
+  >
+
+  <label for="agentInviteStation">Assign Polling Station</label>
+  <select id="agentInviteStation">
+    <option value="">Loading your polling stations...</option>
+  </select>
+
+  <button
+    type="button"
+    id="invitePollingAgentButton"
+    onclick="invitePollingAgent()"
+  >
+    Invite Agent
+  </button>
+
+  <p id="agentInvitationMessage" class="muted"></p>
+  <div id="clientAgentInvitationList"></div>
+</div>
+  
+      
       
 <div class="card">
   <h3>Polling Station Payment</h3>
