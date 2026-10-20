@@ -1648,13 +1648,14 @@ async function recoverAgentSubmission() {
 
     if (error) throw error;
 
-    if (!data || !data.found) {
+        if (!data || !data.found) {
       if (statusBox) {
         statusBox.textContent =
-          'The server has not confirmed this report. Keep the saved details and do not create a new report.';
+          'No matching report was found. Your saved report is being retained. Do not change the figures or start a new report. Reconnect and check again.';
       }
+
       return;
-    }
+  }
 
     window.agentSubmissionId = data.submission_id;
     window.agentCancellationDeadline = data.cancellation_deadline;
