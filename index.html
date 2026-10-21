@@ -1414,7 +1414,33 @@ if(ownerProfileArea) ownerProfileArea.style.display='none';
         <div id="clientStationList">Loading polling stations...</div>
       </div>
       
-      
+
+<div class="card" id="clientAgentInviteSection">
+  <h3>Invite a Polling Agent</h3>
+  <p class="muted">
+    Invite an agent to your campaign and assign their polling station.
+  </p>
+
+  <label for="agentEmail">Agent Email Address</label>
+  <input
+    id="agentEmail"
+    type="email"
+    placeholder="Enter agent email"
+    autocomplete="off"
+  >
+
+  <label for="agentStationId">Assign Polling Station</label>
+  <select id="agentStationId">
+    <option value="">Select a polling station</option>
+  </select>
+
+  <button type="button" onclick="invitePollingAgent()">
+    Send Agent Invitation
+  </button>
+
+  <p id="agentInviteMessage" class="muted" role="status"></p>
+</div>
+  
 <div class="card">
   <h3>Polling Station Payment</h3>
   <p>Review your unpaid polling stations and submit your M-Pesa payment details.</p>
