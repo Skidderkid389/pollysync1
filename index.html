@@ -1682,6 +1682,70 @@ function escapeText(value){
   });
   }
 
+async function loadAgentAssignment() {
+  const stationElement = document.getElementById('assignedStation');
+  const votersElement = document.getElementById('assignedVoters');
+
+  if (!stationElement || !votersElement) return;
+
+  try {
+    const { data: sessionData, error: sessionError } =
+      await pollySyncDB.auth.getSession();
+
+    if (sessionError || !sessionData?.session) {
+      stationElement.textContent = 'Please sign in again.';
+      votersElement.textContent = 'Unavailable';
+      return;
+    }
+
+    const userId = sessionData.session.user.id;
+
+    const { data: profile, error: profileError } =
+      await pollySyncDB
+        .from('profiles')
+        .select('role, campaign_id, assigned_station_id')
+        .eq('id', userId)
+        .single();
+
+    if (
+      profileError ||
+      !profile ||
+      profile.role !== 'agent' ||
+      !profile.assigned_station_id ||
+      !profile.campaign_id
+    ) {
+      stationElement.textContent = 'No polling station assigned.';
+      votersElement.textContent = 'Unavailable';
+      return;
+    }
+
+    const { data: station, error: stationError } =
+      await pollySyncDB
+        .from('polling_stations')
+        .select('station_name, registered_voters')
+        .eq('id', profile.assigned_station_id)
+        .eq('campaign_id', profile.campaign_id)
+        .single();
+
+    if (stationError || !station) {
+      stationElement.textContent =
+        'Could not load assigned station.';
+      votersElement.textContent = 'Unavailable';
+      console.error('Agent station lookup failed:', stationError);
+      return;
+    }
+
+    stationElement.textContent = station.station_name;
+    votersElement.textContent = station.registered_voters;
+
+  } catch (error) {
+    console.error('Could not load agent assignment:', error);
+    stationElement.textContent = 'Could not load assigned station.';
+    votersElement.textContent = 'Unavailable';
+  }
+  }
+  
+
   function goBack(){
   document.getElementById('portal').classList.add('hidden');
   document.getElementById('welcome').classList.add('hidden');
