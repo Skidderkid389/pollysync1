@@ -1833,8 +1833,23 @@ async function setPollySyncPassword() {
     return;
   }
 
-  message.textContent =
-    'Password saved successfully. You can now sign in to PollySync.';
+    document.getElementById('newPassword').value = '';
+  document.getElementById('confirmPassword').value = '';
+
+  const passwordCard =
+    document.getElementById('passwordSetupCard');
+  passwordCard.classList.add('hidden');
+
+  const loginCard = document.getElementById('loginCard');
+  loginCard.style.display = 'block';
+
+  const loginEmail = document.getElementById('loginEmail');
+  if (data.user?.email) {
+    loginEmail.value = data.user.email;
+  }
+
+  document.getElementById('loginMessage').textContent =
+    'Password saved successfully. Please sign in with your new password.';
 }
 </script>
   
