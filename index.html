@@ -1515,6 +1515,35 @@ if(ownerProfileArea) ownerProfileArea.style.display='none';
   <p id="paymentRequestMessage" class="muted"></p>
   <div id="clientPaymentRequestStatus"></div>
 </div>
+
+<div class="card" id="clientContestantsSection">
+  <h3>Register Contestants</h3>
+  <p class="muted">
+    Register contestants once for your electoral contest.
+    All agents in your campaign will use the same list.
+  </p>
+
+  <label for="contestantName">Contestant Name</label>
+  <input
+    id="contestantName"
+    type="text"
+    placeholder="Enter contestant's full name"
+    autocomplete="off"
+  >
+
+  <label>
+    <input id="contestantIsAspirant" type="checkbox">
+    This contestant is my campaign
+  </label>
+
+  <button type="button" onclick="registerContestant()">
+    Register Contestant
+  </button>
+
+  <p id="contestantRegistrationMessage" class="muted" role="status"></p>
+  <div id="clientContestantList">Loading contestants...</div>
+</div>
+  
   <div class="card">
         <h3>Results &amp; Reports</h3>
         <p>Your campaign results and downloadable report will appear here once database integration is complete.</p>
