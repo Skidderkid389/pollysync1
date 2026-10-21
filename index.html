@@ -1992,6 +1992,54 @@ const pollySyncDB = window.supabase.createClient(
 );
 
 console.log('PollySync Supabase client initialized.');
+  
+async function registerContestant() {
+  const nameInput = document.getElementById('contestantName');
+  const aspirantCheckbox =
+    document.getElementById('contestantIsAspirant');
+  const message =
+    document.getElementById('contestantRegistrationMessage');
+
+  const candidateName = nameInput.value.trim();
+  const isCampaignCandidate = aspirantCheckbox.checked;
+
+  if (!candidateName) {
+    message.textContent = 'Please enter the contestant name.';
+    return;
+  }
+
+  message.textContent = 'Registering contestant...';
+
+  try {
+    const { data, error } = await pollySyncDB.rpc(
+      'register_campaign_contestant',
+      {
+        p_candidate_name: candidateName,
+        p_is_campaign_candidate: isCampaignCandidate
+      }
+    );
+
+    if (error) {
+      if (error.message.includes('Wrong campaign candidate marked')) {
+        message.textContent = 'Wrong campaign candidate marked';
+      } else {
+        message.textContent =
+          'Could not register contestant. Please try again.';
+        console.error('Contestant registration failed:', error);
+      }
+      return;
+    }
+
+    message.textContent = 'Contestant registered successfully.';
+    nameInput.value = '';
+    aspirantCheckbox.checked = false;
+
+  } catch (error) {
+    console.error('Contestant registration error:', error);
+        message.textContent =
+      'A connection error occurred. Please try again.';
+  }
+
 </script>
   
 <section class="card hidden" id="passwordSetupCard">
