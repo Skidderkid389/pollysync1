@@ -810,7 +810,15 @@ async function loadClientStations() {
       list.textContent = 'No polling stations registered yet.';
       return;
     }
+    const agentStationSelect = document.getElementById('agentStationId');
 
+    if (agentStationSelect) {
+      agentStationSelect.innerHTML =
+        '<option value="">Select a polling station</option>' +
+        stations.map(station =>
+          `<option value="${station.id}">${station.station_name}</option>`
+        ).join('');
+  }
     list.innerHTML = stations.map(station => `
       <div class="tile">
         <strong>${station.station_name}</strong>
