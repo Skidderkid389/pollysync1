@@ -1669,6 +1669,7 @@ if(ownerProfileArea) ownerProfileArea.style.display='none';
 <p class="muted">Review all figures carefully before proceeding to submission.</p>`;
     
 loadAgentAssignment();
+loadAgentContestants();
   
   }
         document.getElementById('loginCard').style.display = 'none';
@@ -1797,6 +1798,55 @@ function escapeText(value){
   });
   }
 
+async function loadAgentContestants() {
+  const container =
+    document.getElementById('candidateVoteFields');
+
+  if (!container) return;
+
+  container.textContent = 'Loading contestants...';
+
+  try {
+    const { data, error } = await pollySyncDB.rpc(
+      'get_agent_contestants'
+    );
+
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      container.textContent =
+        'No contestants registered for this campaign yet.';
+      return;
+    }
+
+    container.innerHTML = data.map(candidate => {
+      const id = escapeText(candidate.candidate_id);
+      const name = escapeText(candidate.candidate_name);
+
+      return `
+        <div class="tile">
+          <label for="candidateVotes_${id}">${name}</label>
+          <input
+            id="candidateVotes_${id}"
+            type="number"
+            min="0"
+            step="1"
+            placeholder="Enter votes for ${name}"
+            data-candidate-id="${id}"
+            data-candidate-name="${name}"
+            required
+          >
+        </div>
+      `;
+    }).join('');
+
+  } catch (error) {
+    console.error('Could not load agent contestants:', error);
+    container.textContent =
+      'Could not load contestants. Please refresh and try again.';
+  }
+  }
+  
 async function loadAgentAssignment() {
   const stationElement = document.getElementById('assignedStation');
   const votersElement = document.getElementById('assignedVoters');
