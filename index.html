@@ -1530,37 +1530,151 @@ if(ownerProfileArea) ownerProfileArea.style.display='none';
     title.textContent='Agent Portal';
     description.textContent='Prepare a polling-station result submission.';
     content.innerHTML=`
-      <label for="station">Polling station</label>
-      <input id="station" placeholder="Enter demo station name">
-      <label for="voters">Registered voters</label>
-      <input id="voters" type="number" min="1" placeholder="Enter registered voters">
-      <label for="candidate">Candidate name</label>
-      <input id="candidate" placeholder="Enter candidate name">
-      <label for="votes">Votes received</label>
-      <input id="votes" type="number" min="0" placeholder="Enter votes">
-      <button onclick="previewResult()">Confirm demo summary</button>
+      <label>Assigned polling station</label>
+<div id="assignedStation">Loading assigned station...</div>
+<label>Registered voters</label>
+<div id="assignedVoters">Loading registered voters...</div>
+
+<h3>Candidate votes</h3>
+<div id="candidateVoteFields">Loading candidates...</div>
+
+<label for="validVotes">Valid votes</label>
+<input id="validVotes" type="number" min="0" placeholder="Enter valid votes">
+
+<label for="rejectedVotes">Rejected votes</label>
+<input id="rejectedVotes" type="number" min="0" placeholder="Enter rejected votes">
+
+<label for="otherVotes">Other votes</label>
+<input id="otherVotes" type="number" min="0" placeholder="Enter other votes">
+
+<label for="presidingOfficer">Presiding officer's name</label>
+<input id="presidingOfficer" placeholder="Enter presiding officer's name" required>
+
+<label for="officialFormReference">Official form reference</label>
+<input id="officialFormReference" placeholder="Enter official form reference" required>
+      <button onclick="previewResult()">Review and confirm results</button>
       <div id="summary"></div>
-      <p class="muted">This preview does not submit or save election data.</p>`;
+<p class="muted">Review all figures carefully before proceeding to submission.</p>`;
   }
         document.getElementById('loginCard').style.display = 'none';
   welcome.classList.add('hidden');
   portal.classList.remove('hidden');
 }
 
-function previewResult(){
-  const station=document.getElementById('station').value.trim();
-  const voters=Number(document.getElementById('voters').value);
-  const candidate=document.getElementById('candidate').value.trim();
-  const votesInput=document.getElementById('votes').value;
-  const votes=Number(votesInput);
-  const summary=document.getElementById('summary');
 
-  if(!station||!candidate||!voters||voters<1||votesInput===''||votes<0||votes>voters){
-    summary.innerHTML='<p class="notice">Check your entries. Votes must be between zero and the registered-voter count.</p>';
+function previewResult(){
+  const station =
+    document.getElementById('assignedStation').textContent.trim();
+  const votersText =
+    document.getElementById('assignedVoters').textContent.trim();
+  const voters = Number(votersText);
+  const validInput = document.getElementById('validVotes').value;
+  const rejectedInput = document.getElementById('rejectedVotes').value;
+  const otherInput = document.getElementById('otherVotes').value;
+  const presidingOfficer =
+    document.getElementById('presidingOfficer').value.trim();
+  const formReference =
+    document.getElementById('officialFormReference').value.trim();
+  const summary = document.getElementById('summary');
+  const candidateContainer =
+    document.getElementById('candidateVoteFields');
+
+  if (
+    !station ||
+    station === 'Loading assigned station...' ||
+    !votersText ||
+    votersText === 'Loading registered voters...' ||
+    !Number.isFinite(voters) ||
+    voters < 1
+  ) {
+    summary.innerHTML =
+      '<p class="notice">The assigned station and registered-voter count must load before reviewing results.</p>';
     return;
   }
-  summary.innerHTML='<div class="notice"><strong>Demo summary</strong><br>Station: '+escapeText(station)+'<br>Registered voters: '+voters+'<br>Candidate: '+escapeText(candidate)+'<br>Votes: '+votes+'<br><br>Preview only — nothing has been submitted.</div>';
+
+  if (
+    validInput === '' ||
+    rejectedInput === '' ||
+    otherInput === '' ||
+    !presidingOfficer ||
+    !formReference
+  ) {
+    summary.innerHTML =
+      '<p class="notice">Complete all vote fields, the presiding officer name, and the official form reference.</p>';
+    return;
+  }
+
+  const validVotes = Number(validInput);
+  const rejectedVotes = Number(rejectedInput);
+  const otherVotes = Number(otherInput);
+
+  if (
+    !Number.isInteger(validVotes) || validVotes < 0 ||
+    !Number.isInteger(rejectedVotes) || rejectedVotes < 0 ||
+    !Number.isInteger(otherVotes) || otherVotes < 0
+  ) {
+    summary.innerHTML =
+      '<p class="notice">Vote figures must be whole numbers of zero or more.</p>';
+    return;
+  }
+
+  const candidateInputs =
+    candidateContainer.querySelectorAll('input[data-candidate-id]');
+  let candidateTotal = 0;
+  const candidateLines = [];
+
+  if (!candidateInputs.length) {
+    summary.innerHTML =
+      '<p class="notice">Candidate fields have not loaded. Please wait for the candidate list.</p>';
+    return;
+  }
+
+  for (const input of candidateInputs) {
+    if (input.value === '' ||
+        !Number.isInteger(Number(input.value)) ||
+        Number(input.value) < 0) {
+      summary.innerHTML =
+        '<p class="notice">Enter a whole-number vote count of zero or more for every candidate.</p>';
+      return;
+    }
+
+    const votes = Number(input.value);
+    candidateTotal += votes;
+
+    const label = input.dataset.candidateName || 'Candidate';
+    candidateLines.push(
+      '<br>' + escapeText(label) + ': ' + votes
+    );
+  }
+
+  if (candidateTotal !== validVotes) {
+    summary.innerHTML =
+      '<p class="notice">The sum of candidate votes must equal valid votes.</p>';
+    return;
+  }
+
+  const totalVotes = validVotes + rejectedVotes + otherVotes;
+
+  if (totalVotes > voters) {
+    summary.innerHTML =
+      '<p class="notice">Valid, rejected, and other votes cannot exceed registered voters.</p>';
+    return;
+  }
+
+  summary.innerHTML =
+    '<div class="notice"><strong>Review result summary</strong>' +
+    '<br>Station: ' + escapeText(station) +
+    '<br>Registered voters: ' + voters +
+    candidateLines.join('') +
+    '<br><strong>Valid votes:</strong> ' + validVotes +
+    '<br><strong>Rejected votes:</strong> ' + rejectedVotes +
+    '<br><strong>Other votes:</strong> ' + otherVotes +
+    '<br><strong>Total votes:</strong> ' + totalVotes +
+    '<br>Presiding officer: ' + escapeText(presidingOfficer) +
+    '<br>Official form reference: ' + escapeText(formReference) +
+    '<br><br>Review the figures carefully before proceeding.</div>';
 }
+  
 
 function escapeText(value){
   return value.replace(/[&<>"']/g,function(c){
