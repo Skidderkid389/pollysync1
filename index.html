@@ -330,6 +330,7 @@ height:120px;
   
   
   
+
 async function loadOwnerPaymentRequests() {
   const container = document.getElementById('ownerPaymentRequests');
 
@@ -340,7 +341,7 @@ async function loadOwnerPaymentRequests() {
   try {
     const { data: requests, error } = await pollySyncDB
       .from('payment_requests')
-      .select('id, campaign_id, stations_count, price_per_station, total_amount, mpesa_receipt, payment_status, created_at')
+      .select('id, campaign_id, stations_count, price_per_station, total_amount, mpesa_receipt, payment_status, receipt_verified, created_at')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -379,6 +380,8 @@ async function loadOwnerPaymentRequests() {
         request.payment_status || 'pending'
       ).toLowerCase();
 
+      const verified = request.receipt_verified === true;
+
       const amount = Number(
         request.total_amount
       ).toLocaleString('en-KE', {
@@ -386,18 +389,44 @@ async function loadOwnerPaymentRequests() {
         maximumFractionDigits: 2
       });
 
+      const requestId = safe(request.id);
+
+      const verification = status === 'pending'
+        ? verified
+          ? '<p>Receipt verification: VERIFIED</p>'
+          : `
+            <p>Receipt verification: Awaiting owner confirmation</p>
+            <label for="ownerReceipt_${requestId}">
+              Enter code from recipient's M-Pesa confirmation
+            </label>
+            <input
+              id="ownerReceipt_${requestId}"
+              type="text"
+              maxlength="10"
+              minlength="10"
+              autocomplete="off"
+              placeholder="10-character M-Pesa code">
+            <button
+              type="button"
+              onclick="ownerVerifyStationPayment('${requestId}')">
+              Verify Code
+            </button>
+            <p id="ownerVerifyMessage_${requestId}" role="status"></p>
+          `
+        : '';
+
       const buttons = status === 'pending'
         ? `
           <button
             type="button"
             style="background:#168447;color:white;"
-            onclick="reviewStationPayment('${safe(request.id)}', true)">
+            onclick="reviewStationPayment('${requestId}', true)">
             Approve Payment
           </button>
           <button
             type="button"
             style="background:#c62828;color:white;"
-            onclick="reviewStationPayment('${safe(request.id)}', false)">
+            onclick="reviewStationPayment('${requestId}', false)">
             Reject Payment
           </button>
         `
@@ -407,11 +436,12 @@ async function loadOwnerPaymentRequests() {
         <div class="tile">
           <strong>${safe(campaign?.aspirant_name || 'Unknown campaign')}</strong>
           <p>Client: ${safe(campaign?.client_email || 'Not provided')}</p>
-          <p>M-Pesa Transaction Code: ${safe(request.mpesa_receipt)}</p>
+          <p>Client M-Pesa Code: ${safe(request.mpesa_receipt)}</p>
           <p>Stations covered: ${safe(request.stations_count)}</p>
           <p>Price per station: KSh ${safe(request.price_per_station)}</p>
           <p>Total amount: KSh ${amount}</p>
           <p>Status: ${safe(status.toUpperCase())}</p>
+          ${verification}
           ${buttons}
         </div>
       `;
@@ -423,6 +453,7 @@ async function loadOwnerPaymentRequests() {
       'Could not load payment requests. Please refresh and try again.';
   }
   }
+  
   
 
   
@@ -463,6 +494,58 @@ async function reviewStationPayment(requestId, approve) {
     );
   }
 }
+  
+async function ownerVerifyStationPayment(requestId) {
+  const input = document.getElementById(
+    `ownerReceipt_${requestId}`
+  );
+  const message = document.getElementById(
+    `ownerVerifyMessage_${requestId}`
+  );
+
+  if (!input || !message) return;
+
+  const receipt = input.value.trim().toUpperCase();
+
+  if (receipt.length !== 10) {
+    message.textContent =
+      "Code doesn't exist. Please check your M-Pesa confirmation and try again.";
+    return;
+  }
+
+  message.textContent = 'Checking M-Pesa codes...';
+
+  try {
+    const { data, error } = await pollySyncDB.rpc(
+      'owner_verify_station_payment',
+      {
+        p_request_id: requestId,
+        p_owner_receipt: receipt
+      }
+    );
+
+    if (error) throw error;
+
+    if (data?.verified === true) {
+      message.textContent =
+        'M-Pesa codes match. You can now review the payment for approval.';
+      input.value = '';
+      await loadOwnerPaymentRequests();
+      return;
+    }
+
+    message.textContent =
+      data?.message ||
+      'M-Pesa code mismatch. Payment not approved.';
+
+  } catch (error) {
+    console.error('M-Pesa verification failed:', error);
+    message.textContent =
+      error.message ||
+      'Could not verify the code. Please try again.';
+  }
+  }
+  
   
 async function saveDefaultStationPrice() {
   const input = document.getElementById('defaultStationPrice');
