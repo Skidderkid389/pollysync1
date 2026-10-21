@@ -716,6 +716,46 @@ votersInput.value = '';
   }
 }
 
+
+async function invitePollingAgent() {
+  const emailInput = document.getElementById('agentEmail');
+  const stationInput = document.getElementById('agentStationId');
+  const message = document.getElementById('agentInviteMessage');
+
+  const agentEmail = emailInput.value.trim();
+  const stationId = stationInput.value;
+
+  if (!agentEmail || !stationId) {
+    message.textContent = 'Enter the agent email and select a polling station.';
+    return;
+  }
+
+  message.textContent = 'Sending invitation...';
+
+  try {
+    const { data, error } = await pollySyncDB.functions.invoke(
+      'pollysync-agent-invite',
+      {
+        body: {
+  email: agentEmail,
+  station_id: stationId
+  }
+      }
+    );
+
+    if (error) {
+      console.error('Agent invitation failed:', error);
+      message.textContent = 'Invitation failed: ' + error.message;
+      return;
+    }
+
+    message.textContent =
+      data?.message || 'Invitation request completed successfully.';
+  } catch (error) {
+    console.error('Agent invitation error:', error);
+    message.textContent = 'Could not send invitation. Please try again.';
+  }
+  }
   
   
 async function loadClientStations() {
