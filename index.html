@@ -1788,10 +1788,263 @@ function previewResult(){
     '<br><strong>Total votes:</strong> ' + totalVotes +
     '<br>Presiding officer: ' + escapeText(presidingOfficer) +
     '<br>Official form reference: ' + escapeText(formReference) +
-    '<br><br>Review the figures carefully before proceeding.</div>';
+        '<br><br>Review the figures carefully before proceeding.' +
+    '<br><br><button type="button" onclick="confirmAgentResult()">Confirm figures</button></div>';
+}
+
+
+
+function confirmAgentResult() {
+  const summary = document.getElementById('summary');
+  const candidateInputs = document.querySelectorAll(
+    '#candidateVoteFields input[data-candidate-id]'
+  );
+
+  if (!window.agentAssignedStationId) {
+    summary.textContent =
+      'The assigned station ID is unavailable. Please refresh and try again.';
+    return;
+  }
+
+  if (!candidateInputs.length) {
+    summary.textContent = 'No candidate vote fields are available.';
+    return;
+  }
+
+  const candidateVotes = [];
+
+  for (const input of candidateInputs) {
+    const votes = Number(input.value);
+
+    if (
+      input.value === '' ||
+      !Number.isInteger(votes) ||
+      votes < 0
+    ) {
+      summary.textContent =
+        'Please enter a valid whole-number vote count for every candidate.';
+      return;
+    }
+
+    candidateVotes.push({
+      candidate_id: input.dataset.candidateId,
+      votes: votes
+    });
+  }
+
+  const validVotes = Number(document.getElementById('validVotes').value);
+  const rejectedVotes = Number(document.getElementById('rejectedVotes').value);
+  const otherVotes = Number(document.getElementById('otherVotes').value);
+
+  window.agentPreparedSubmission = {
+    station_id: window.agentAssignedStationId,
+    station_name: document.getElementById('assignedStation').textContent.trim(),
+    registered_voters: Number(
+      document.getElementById('assignedVoters').textContent.trim()
+    ),
+    candidate_votes: candidateVotes,
+    valid_votes: validVotes,
+    rejected_votes: rejectedVotes,
+    other_votes: otherVotes,
+    total_votes: validVotes + rejectedVotes + otherVotes,
+    presiding_officer_name:
+      document.getElementById('presidingOfficer').value.trim(),
+    official_form_reference:
+      document.getElementById('officialFormReference').value.trim()
+  };
+
+  summary.innerHTML =
+    '<p class="notice">Figures confirmed for submission preparation. ' +
+    'Nothing has been sent to the server yet.</p>' +
+    '<button type="button" onclick="submitAgentResult()">' +
+    'Submit Results</button>';
 }
   
 
+async function submitAgentResult() {
+  const summary = document.getElementById('summary');
+  const report = window.agentPreparedSubmission;
+
+  if (!report) {
+    summary.textContent =
+      'Please confirm the report figures before submitting.';
+    return;
+  }
+
+  if (window.agentSubmissionInFlight) return;
+
+  if (!window.agentSubmissionClientId) {
+    if (!window.crypto || !crypto.randomUUID) {
+      summary.textContent =
+        'Secure submission IDs are unavailable. Please refresh and try again.';
+      return;
+    }
+
+    window.agentSubmissionClientId = crypto.randomUUID();
+  }
+
+  window.agentSubmissionInFlight = true;
+  summary.textContent = 'Sending report securely to PollySync...';
+
+  try {
+    const candidateVotes = {
+      candidates: report.candidate_votes,
+      valid_votes: report.valid_votes,
+      rejected_votes: report.rejected_votes,
+      other_votes: report.other_votes
+    };
+
+    const { data, error } = await pollySyncDB.rpc(
+      'receive_result_submission',
+      {
+        p_client_submission_id: window.agentSubmissionClientId,
+        p_station_id: report.station_id,
+        p_registered_voters: report.registered_voters,
+        p_candidate_votes: candidateVotes,
+        p_total_votes: report.total_votes,
+        p_notes: null,
+        p_presiding_officer_name: report.presiding_officer_name,
+        p_official_form_reference: report.official_form_reference
+      }
+    );
+
+    if (error) throw error;
+
+    if (!data || !data.submission_id || !data.server_received_at) {
+      summary.textContent =
+        'The server response could not confirm receipt. ' +
+        'Retry this same report using the same submission ID.';
+      return;
+    }
+
+    window.agentServerSubmissionId = data.submission_id;
+
+        showAgentCancellationWindow(data);
+
+  } catch (error) {
+    console.error('Agent result submission failed:', error);
+    summary.textContent =
+      'Receipt has not been confirmed. Check your connection and ' +
+      'retry the same report without changing its figures. ' +
+      'Submission ID: ' + window.agentSubmissionClientId;
+  } finally {
+    window.agentSubmissionInFlight = false;
+  }
+  }
+
+
+function showAgentCancellationWindow(data) {
+  const summary = document.getElementById('summary');
+  const deadline = Date.parse(data.cancellation_deadline);
+
+  if (!Number.isFinite(deadline)) {
+    summary.textContent =
+      'Server receipt confirmed, but no valid cancellation deadline was returned. ' +
+      'The server still controls whether cancellation is allowed.';
+    return;
+  }
+
+  if (window.agentCancelCountdownTimer) {
+    clearInterval(window.agentCancelCountdownTimer);
+  }
+
+  window.agentServerSubmissionId = data.submission_id;
+
+  summary.innerHTML =
+    '<p class="notice">Report received by the server.</p>' +
+    '<p>Cancellation time remaining: ' +
+    '<strong id="agentCancelCountdown">Checking...</strong></p>' +
+    '<button type="button" id="agentCancelButton" ' +
+    'onclick="cancelAgentResult()">Cancel submission</button>';
+
+  const countdown = document.getElementById('agentCancelCountdown');
+  const cancelButton = document.getElementById('agentCancelButton');
+
+  function updateCountdown() {
+    const remaining = Math.max(0, deadline - Date.now());
+    const seconds = Math.ceil(remaining / 1000);
+
+    countdown.textContent = seconds + ' seconds';
+
+    
+    if (remaining <= 0) {
+      clearInterval(window.agentCancelCountdownTimer);
+      window.agentCancelCountdownTimer = null;
+      countdown.textContent = 'Cancellation window closed';
+      cancelButton.disabled = true;
+      cancelButton.textContent = 'Cancellation window closed';
+      cancelButton.onclick = null;
+    }
+  
+  }
+
+  updateCountdown();
+
+  if (deadline > Date.now()) {
+    window.agentCancelCountdownTimer =
+      setInterval(updateCountdown, 250);
+  }
+}
+
+async function cancelAgentResult() {
+  const summary = document.getElementById('summary');
+  const cancelButton = document.getElementById('agentCancelButton');
+
+  if (!window.agentServerSubmissionId) {
+    summary.textContent = 'No server submission is available to cancel.';
+    return;
+  }
+
+  if (window.agentCancellationInFlight) return;
+
+  window.agentCancellationInFlight = true;
+
+  if (cancelButton) cancelButton.disabled = true;
+
+  try {
+    const { data, error } = await pollySyncDB.rpc(
+      'cancel_result_submission',
+      {
+        p_submission_id: window.agentServerSubmissionId
+      }
+    );
+
+    if (error) throw error;
+
+    if (data?.status === 'cancelled') {
+      if (window.agentCancelCountdownTimer) {
+        clearInterval(window.agentCancelCountdownTimer);
+        window.agentCancelCountdownTimer = null;
+      }
+
+      summary.textContent =
+        'The server confirmed that this report was cancelled.';
+      return;
+    }
+
+    if (data?.status === 'locked' || data?.cancellation_allowed === false) {
+      if (window.agentCancelCountdownTimer) {
+        clearInterval(window.agentCancelCountdownTimer);
+        window.agentCancelCountdownTimer = null;
+      }
+
+      summary.textContent =
+        'The cancellation deadline has passed. The report is locked.';
+      return;
+    }
+
+    summary.textContent =
+      'The server did not confirm cancellation. Check the report status before retrying.';
+
+  } catch (error) {
+    console.error('Report cancellation failed:', error);
+    summary.textContent =
+      'Cancellation could not be confirmed. Check the report status before retrying.';
+  } finally {
+    window.agentCancellationInFlight = false;
+  }
+  }
+  
 function escapeText(value){
   return value.replace(/[&<>"']/g,function(c){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
@@ -1900,6 +2153,8 @@ async function loadAgentAssignment() {
       return;
     }
 
+    
+    window.agentAssignedStationId = profile.assigned_station_id;
     stationElement.textContent = station.station_name;
     votersElement.textContent = station.registered_voters;
 
