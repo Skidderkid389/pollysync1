@@ -29,7 +29,7 @@ button.cancel-button{background:#fce8e8;color:#a61b1b}
 .tile strong{display:block;font-size:22px;margin-top:7px}
 footer{text-align:center;color:#77859a;font-size:12px;padding:20px}
 
-  
+
 /* Compact Owner Dashboard navigation */
 .owner-nav{
   display:grid;
@@ -109,8 +109,8 @@ height:120px;
 </header>
 
 <main>
-  
-  
+
+
 <section class="card" id="loginCard">
   <h2>Sign in to PollySync</h2>
   <p class="muted">Use your registered account to access your authorised portal.</p>
@@ -158,7 +158,7 @@ height:120px;
 
 <script>
 
-  
+
 
  let signedInRole = null; 
 
@@ -179,7 +179,7 @@ height:120px;
       .eq('id', userId)
       .single();
 
-  
+
   if (profileError) {
     console.error('Draft profile lookup failed:', profileError);
     throw new Error('Could not read your agent profile. Please check your connection and permissions.');
@@ -200,7 +200,7 @@ height:120px;
     });
     throw new Error('Your assigned station does not match this report. Please refresh the agent portal.');
   }
-  
+
 
   if (!window.agentSubmissionClientId) {
     if (!window.crypto || !crypto.randomUUID) {
@@ -223,7 +223,7 @@ height:120px;
 
   localStorage.setItem(storageKey, JSON.stringify(draft));
   }
-  
+
   async function loadCampaignCount() {
   const { count, error } = await pollySyncDB
     .from('campaigns')
@@ -254,7 +254,7 @@ height:120px;
   if (activeElement) {
     activeElement.textContent = activeCount ?? 0;
   }
-  
+
     const { data: campaigns, error: listError } = await pollySyncDB
     .from('campaigns')
     .select('id, aspirant_name, client_email, campaign_area, licence_expiry, active, contest_id')
@@ -387,11 +387,11 @@ height:120px;
     `;
   }).join('');
   }
-  
-  
-  
-  
-  
+
+
+
+
+
 
 async function loadOwnerPaymentRequests() {
   const container = document.getElementById('ownerPaymentRequests');
@@ -515,11 +515,10 @@ async function loadOwnerPaymentRequests() {
       'Could not load payment requests. Please refresh and try again.';
   }
   }
-  
-  
 
-  
-async function reviewStationPayment(requestId, approve) {
+
+
+  async function reviewStationPayment(requestId, approve) {
   const action = approve ? 'approve' : 'reject';
 
   const confirmed = confirm(
@@ -556,7 +555,7 @@ async function reviewStationPayment(requestId, approve) {
     );
   }
 }
-  
+
 async function ownerVerifyStationPayment(requestId) {
   const input = document.getElementById(
     `ownerReceipt_${requestId}`
@@ -607,8 +606,8 @@ async function ownerVerifyStationPayment(requestId) {
       'Could not verify the code. Please try again.';
   }
   }
-  
-  
+
+
 async function saveDefaultStationPrice() {
   const input = document.getElementById('defaultStationPrice');
   const message = document.getElementById('pricingMessage');
@@ -641,7 +640,7 @@ async function saveDefaultStationPrice() {
   message.textContent = 'Default station price saved successfully.';
   await loadStationBilling();
   }
-  
+
   async function loadClientCampaign() {
   const nameElement = document.getElementById('clientAspirantName');
   const areaElement = document.getElementById('clientCampaignArea');
@@ -687,7 +686,7 @@ async function saveDefaultStationPrice() {
       statusElement.textContent = 'Unavailable';
       return;
     }
-    
+
     const { data: contests, error: contestError } =
       await pollySyncDB.rpc('client_get_my_electoral_contest');
 
@@ -725,9 +724,9 @@ if (successBox && contest) {
 } else if (successBox) {
   successBox.style.display = 'none';
   }
-  
 
-    
+
+
     nameElement.textContent =
       campaign.aspirant_name || 'Name not provided';
 
@@ -739,7 +738,7 @@ if (successBox && contest) {
 
     areaElement.textContent =
       campaign.campaign_area || 'Not specified';
-  
+
 
     const today = new Date().toLocaleDateString('en-CA', {
       timeZone: 'Africa/Nairobi'
@@ -760,159 +759,8 @@ if (successBox && contest) {
     statusElement.textContent = 'Unavailable';
   }
 }
- 
 
-async function loadClientResults() {
-  const message = document.getElementById('clientResultsMessage');
-  const list = document.getElementById('clientResultsList');
 
-  if (!message || !list) return;
-
-  message.textContent = 'Loading campaign results...';
-  list.replaceChildren();
-
-  try {
-    const { data: sessionData, error: sessionError } =
-      await pollySyncDB.auth.getSession();
-
-    if (sessionError || !sessionData.session) {
-      message.textContent = 'Please sign in again to view results.';
-      return;
-    }
-
-    const userId = sessionData.session.user.id;
-
-    const { data: profile, error: profileError } =
-      await pollySyncDB
-        .from('profiles')
-        .select('campaign_id')
-        .eq('id', userId)
-        .single();
-
-    if (profileError || !profile || !profile.campaign_id) {
-      message.textContent = 'No campaign is assigned to this account.';
-      return;
-    }
-
-    const { data: campaign, error: campaignError } =
-      await pollySyncDB
-        .from('campaigns')
-        .select('contest_id')
-        .eq('id', profile.campaign_id)
-        .single();
-
-    if (campaignError || !campaign || !campaign.contest_id) {
-      message.textContent = 'Could not identify your electoral contest.';
-      return;
-    }
-
-    const { data: results, error: resultsError } =
-      await pollySyncDB
-        .from('result_submissions')
-        .select('id, station_id, status, server_received_at, total_votes, candidate_votes, presiding_officer_name, official_form_reference')
-        .eq('campaign_id', profile.campaign_id)
-        .in('status', ['submitted', 'locked'])
-        .order('server_received_at', { ascending: false });
-
-    if (resultsError) throw resultsError;
-
-    if (!results || results.length === 0) {
-      message.textContent =
-        'No submitted results are available for this campaign yet.';
-      return;
-    }
-
-    const { data: candidates, error: candidatesError } =
-      await pollySyncDB
-        .from('candidates')
-        .select('id, candidate_name')
-        .eq('contest_id', campaign.contest_id);
-
-    if (candidatesError) throw candidatesError;
-
-    const { data: stations, error: stationsError } =
-      await pollySyncDB
-        .from('polling_stations')
-        .select('id, station_name')
-        .eq('campaign_id', profile.campaign_id);
-
-    if (stationsError) throw stationsError;
-
-    const candidateNames = {};
-    (candidates || []).forEach(candidate => {
-      candidateNames[candidate.id] = candidate.candidate_name;
-    });
-
-    const stationNames = {};
-    (stations || []).forEach(station => {
-      stationNames[station.id] = station.station_name;
-    });
-
-    results.forEach(result => {
-      const card = document.createElement('div');
-      card.className = 'card';
-
-      const heading = document.createElement('h4');
-      heading.textContent =
-        stationNames[result.station_id] || 'Polling station';
-      card.appendChild(heading);
-
-      const status = document.createElement('p');
-      status.textContent = 'Submission status: ' + result.status;
-      card.appendChild(status);
-
-      const received = document.createElement('p');
-      received.textContent = 'Received: ' +
-        (result.server_received_at
-          ? new Date(result.server_received_at).toLocaleString('en-KE', {
-              timeZone: 'Africa/Nairobi'
-            })
-          : 'Not available');
-      card.appendChild(received);
-
-      const total = document.createElement('p');
-      total.textContent = 'Total votes: ' +
-        (result.total_votes ?? 'Not available');
-      card.appendChild(total);
-
-      const form = document.createElement('p');
-      form.textContent = 'Official form reference: ' +
-        (result.official_form_reference || 'Not provided');
-      card.appendChild(form);
-
-      const voteHeading = document.createElement('h5');
-      voteHeading.textContent = 'Candidate votes';
-      card.appendChild(voteHeading);
-
-      const voteList = document.createElement('ol');
-      const voteItems = result.candidate_votes?.candidates || [];
-
-      voteItems
-        .slice()
-        .sort((a, b) => (b.votes || 0) - (a.votes || 0))
-        .forEach(item => {
-          const voteItem = document.createElement('li');
-          const name = candidateNames[item.candidate_id] ||
-            'Candidate name unavailable';
-          voteItem.textContent = name + ': ' + item.votes + ' votes';
-          voteList.appendChild(voteItem);
-        });
-
-      card.appendChild(voteList);
-      list.appendChild(card);
-    });
-
-    message.textContent =
-      results.length + ' submission(s) found. Candidate votes are ranked within each station; campaign-wide rankings are not yet calculated.';
-  } catch (error) {
-    console.error('Could not load client results:', error);
-    message.textContent =
-      'Unable to load results. Please try again later.';
-  }
-  }
-  
-  
-  
 async function registerClientStation() {
   const stationInput = document.getElementById('newStationName');
   const votersInput = document.getElementById('newStationVoters');
@@ -958,8 +806,8 @@ async function registerClientStation() {
       return;
     }
 
-    
-    
+
+
     const { data: existingStations, error: checkError } =
       await pollySyncDB
         .from('polling_stations')
@@ -976,7 +824,7 @@ async function registerClientStation() {
       stationName.trim().toLowerCase()
     );
 
-    
+
     if (duplicateExists) {
       message.textContent =
         'This polling station is already registered in your campaign.';
@@ -990,7 +838,7 @@ async function registerClientStation() {
         station_name: stationName,
         registered_voters: registeredVoters
       });
-        
+
 
     if (insertError) {
       console.error('Could not register station:', insertError.message);
@@ -1052,8 +900,8 @@ async function invitePollingAgent() {
     message.textContent = 'Could not send invitation. Please try again.';
   }
   }
-  
-  
+
+
 async function loadClientStations() {
   const list = document.getElementById('clientStationList');
 
@@ -1131,8 +979,7 @@ async function loadClientStations() {
 }
 
 
-  
-async function loadStationPaymentQuote() {
+  async function loadStationPaymentQuote() {
   const summary = document.getElementById('paymentSummary');
   const button = document.getElementById('submitStationPaymentButton');
 
@@ -1226,9 +1073,9 @@ async function loadStationPaymentQuote() {
     await loadStationPaymentQuote();
   }
   }
-  
 
-  
+
+
 async function loadClientPaymentRequestStatus() {
   const container = document.getElementById('clientPaymentRequestStatus');
 
@@ -1269,9 +1116,9 @@ async function loadClientPaymentRequestStatus() {
       'Unable to load payment request status right now.';
   }
   }
-  
 
-  
+
+
 function updateContestLocationFields() {
   const position = document.getElementById('contestPosition').value;
   const constituency = document.getElementById('contestConstituency');
@@ -1473,8 +1320,8 @@ openPortal();
   }
   }
 
-    
-  
+
+
 function showOwnerSection(sectionId) {
   const sections = [
     'registerSection',
@@ -1498,7 +1345,7 @@ function showOwnerSection(sectionId) {
     );
   });
 }
-  
+
 function openPortal(){
   const role=document.getElementById('role').value;
 
@@ -1623,11 +1470,11 @@ if(ownerProfileArea) ownerProfileArea.style.display='none';
   <button type="button" onclick="registerCampaign()">Register Campaign</button>
   <p id="campaignMessage" class="muted"></p>
 </div>`;
-    loadCampaignCount();
+        loadCampaignCount();
     loadStationBilling();
     loadOwnerPaymentRequests();
     showOwnerSection('campaignsSection');
-    
+
     // Owner profile photo
     const ownerProfileFile = document.getElementById('ownerProfileFile');
     const ownerProfilePreview = document.getElementById('ownerProfilePreview');
@@ -1684,7 +1531,7 @@ if(ownerProfileArea) ownerProfileArea.style.display='none';
         reader.readAsDataURL(file);
       };
     }
-  
+
   }else if(role==='client'){
     type.textContent='POLLYSYNC · CAMPAIGN MANAGEMENT';
     title.textContent='Your Campaign Portal';
@@ -1840,31 +1687,16 @@ if(ownerProfileArea) ownerProfileArea.style.display='none';
   <div id="clientContestantList">Loading contestants...</div>
 </div>
   
-  
   <div class="card">
-    <h3>Results &amp; Reports</h3>
-    <p class="muted">
-      View results received from your polling agents for your campaign.
-    </p>
+        <h3>Results &amp; Reports</h3>
+        <p>Your campaign results and downloadable report will appear here once database integration is complete.</p>
 
-    <div id="clientResultsMessage" class="muted" role="status">
-      Loading campaign results...
-    </div>
-
-    <div id="clientResultsList">
-      Results will appear here once connected.
-    </div>
-
-    <p class="muted">
-      Your campaign results are accessible only to authorised users.
-    </p>
-  </div>
-  
+        <p class="muted">Your campaign data should remain accessible only to authorised users.</p>
+      </div>
+<p class="muted">Your campaign photo, polling stations, incoming results and automatic rankings will appear here after database integration.</p>`;
     loadClientCampaign();
-    loadClientResults();
     loadClientStations();
     loadStationPaymentQuote();
-    
   }else{
     type.textContent='POLLYSYNC · POLLING AGENT PORTAL';
     title.textContent='Agent Portal';
@@ -1895,10 +1727,10 @@ if(ownerProfileArea) ownerProfileArea.style.display='none';
       <button onclick="previewResult()">Review and confirm results</button>
       <div id="summary"></div>
 <p class="muted">Review all figures carefully before proceeding to submission.</p>`;
-    
+
 loadAgentAssignment();
 loadAgentContestants();
-  
+
   }
         document.getElementById('loginCard').style.display = 'none';
   welcome.classList.add('hidden');
@@ -2094,7 +1926,7 @@ async function confirmAgentResult() {
     '<button type="button" onclick="submitAgentResult()">' +
     'Submit Results</button>';
 }
-  
+
 
 async function submitAgentResult() {
   const summary = document.getElementById('summary');
@@ -2142,8 +1974,9 @@ async function submitAgentResult() {
         p_official_form_reference: report.official_form_reference
       }
     );
-
-    if (error) throw error;
+  
+    
+      if (error) throw error;
 
     if (!data || !data.submission_id || !data.server_received_at) {
       summary.textContent =
@@ -2201,7 +2034,7 @@ function showAgentCancellationWindow(data) {
 
     countdown.textContent = seconds + ' seconds';
 
-    
+
     if (remaining <= 0) {
       clearInterval(window.agentCancelCountdownTimer);
       window.agentCancelCountdownTimer = null;
@@ -2210,7 +2043,7 @@ function showAgentCancellationWindow(data) {
       cancelButton.textContent = 'Cancellation window closed';
       cancelButton.onclick = null;
     }
-  
+
   }
 
   updateCountdown();
@@ -2279,7 +2112,7 @@ async function cancelAgentResult() {
     window.agentCancellationInFlight = false;
   }
   }
-  
+
 function escapeText(value){
   return value.replace(/[&<>"']/g,function(c){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
@@ -2334,7 +2167,7 @@ async function loadAgentContestants() {
       'Could not load contestants. Please refresh and try again.';
   }
   }
-  
+
 async function loadAgentAssignment() {
   const stationElement = document.getElementById('assignedStation');
   const votersElement = document.getElementById('assignedVoters');
@@ -2388,7 +2221,7 @@ async function loadAgentAssignment() {
       return;
     }
 
-    
+
     window.agentAssignedStationId = profile.assigned_station_id;
     stationElement.textContent = station.station_name;
     votersElement.textContent = station.registered_voters;
@@ -2399,7 +2232,7 @@ async function loadAgentAssignment() {
     votersElement.textContent = 'Unavailable';
   }
   }
-  
+
 
   function goBack(){
   document.getElementById('portal').classList.add('hidden');
@@ -2428,9 +2261,9 @@ async function loadAgentAssignment() {
     'You have been signed out successfully.';
 }
 
-  
-  
-  
+
+
+
 async function activateCampaignLicence(campaignId) {
   const newExpiry = prompt(
     'Enter the new licence expiry date (YYYY-MM-DD):'
@@ -2488,7 +2321,7 @@ async function activateCampaignLicence(campaignId) {
   }
   }
 
-  
+
 async function linkCampaignContest(campaignId) {
   const position = prompt(
     'Enter electoral position (MCA, MP, Senator, Women Representative, Governor):'
@@ -2543,8 +2376,7 @@ async function linkCampaignContest(campaignId) {
   try {
     const { data: sessionData } =
       await pollySyncDB.auth.getSession();
-
-    if (!sessionData?.session) {
+      if (!sessionData?.session) {
       alert('Please sign in again.');
       return;
     }
@@ -2570,9 +2402,9 @@ async function linkCampaignContest(campaignId) {
     alert('Could not link electoral contest: ' + error.message);
   }
   }
-  
-  
-  
+
+
+
 async function cancelCampaign(campaignId) {
   if (!confirm('Are you sure you want to cancel this campaign? Its records will be preserved.')) {
     return;
@@ -2598,7 +2430,7 @@ async function cancelCampaign(campaignId) {
   alert('Campaign cancelled. Its records have been preserved.');
   await loadCampaignCount();
   }
-    
+
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -2664,7 +2496,7 @@ console.log('PollySync Supabase client initialized.');
     console.error('Session restoration failed:', error);
   }
 });
-  
+
 async function registerContestant() {
   const nameInput = document.getElementById('contestantName');
   const aspirantCheckbox =
@@ -2714,7 +2546,7 @@ async function registerContestant() {
 }
 
 </script>
-  
+
 <section class="card hidden" id="passwordSetupCard">
   <h2>Set Your PollySync Password</h2>
   <p class="muted">Create a password for your invited account.</p>
@@ -2783,7 +2615,7 @@ async function setPollySyncPassword() {
     'Password saved successfully. Please sign in with your new password.';
 }
 </script>
-  
+
 <script>
 window.addEventListener('load', async function () {
   const hashParams = new URLSearchParams(
@@ -2804,7 +2636,7 @@ window.addEventListener('load', async function () {
     return;
   }
 
-  
+
   const { data, error } =
     await pollySyncDB.auth.getSession();
 
@@ -2813,7 +2645,7 @@ window.addEventListener('load', async function () {
       'Your invitation session could not be restored. Please open the invitation link again.';
     return;
   }
-  
+
 
   document.getElementById('loginCard').style.display = 'none';
   document.getElementById('welcome').style.display = 'none';
@@ -2888,8 +2720,8 @@ async function inviteClient(campaignId) {
   }
 }
   </script>
-  
-  
+
+
 </body>
 </html>
-      
+  
