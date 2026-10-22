@@ -161,6 +161,56 @@ height:120px;
   
 
  let signedInRole = null; 
+
+  async function saveAgentPreparedDraft(report) {
+  const { data: sessionData, error: sessionError } =
+    await pollySyncDB.auth.getSession();
+
+  const userId = sessionData?.session?.user?.id;
+
+  if (sessionError || !userId) {
+    throw new Error('Please sign in again before saving this report.');
+  }
+
+  const { data: profile, error: profileError } =
+    await pollySyncDB
+      .from('profiles')
+      .select('role, assigned_station_id')
+      .eq('id', userId)
+      .single();
+
+  if (
+    profileError ||
+    !profile ||
+    profile.role !== 'agent' ||
+    profile.assigned_station_id !== report.station_id
+  ) {
+    throw new Error(
+      'Your account or assigned station could not be verified.'
+    );
+  }
+
+  if (!window.agentSubmissionClientId) {
+    if (!window.crypto || !crypto.randomUUID) {
+      throw new Error('Secure submission IDs are unavailable.');
+    }
+
+    window.agentSubmissionClientId = crypto.randomUUID();
+  }
+
+  const draft = {
+    user_id: userId,
+    station_id: report.station_id,
+    report: report,
+    client_submission_id: window.agentSubmissionClientId,
+    saved_at: new Date().toISOString()
+  };
+
+  const storageKey =
+    'pollySyncAgentDraft:' + userId + ':' + report.station_id;
+
+  localStorage.setItem(storageKey, JSON.stringify(draft));
+  }
   
   async function loadCampaignCount() {
   const { count, error } = await pollySyncDB
