@@ -641,6 +641,79 @@ async function saveDefaultStationPrice() {
   await loadStationBilling();
   }
 
+  
+async function loadClientLiveResults() {
+  const message = document.getElementById('clientLiveResultsMessage');
+  const progress = document.getElementById('clientLiveStationProgress');
+  const rankings = document.getElementById('clientLiveCandidateRankings');
+  const updated = document.getElementById('clientLiveLastUpdated');
+
+  if (!message || !progress || !rankings || !updated) {
+    return;
+  }
+
+  message.textContent = 'Loading provisional campaign results...';
+  progress.textContent = 'Loading station progress...';
+  rankings.textContent = 'Loading candidate rankings...';
+  updated.textContent = 'Retrieving latest server results...';
+
+  try {
+    const { data, error } = await pollySyncDB.rpc(
+      'get_client_live_results'
+    );
+
+    if (error) {
+      throw error;
+    }
+
+    if (!data || !Array.isArray(data.candidate_totals)) {
+      throw new Error('The results response was incomplete.');
+    }
+
+    message.textContent =
+      'Provisional PollySync reports — not official IEBC results.';
+
+    const stationData = data.stations || {};
+    const eligible = Number(stationData.eligible || 0);
+    const reported = Number(stationData.reported || 0);
+    const outstanding = Number(stationData.outstanding || 0);
+
+    progress.textContent =
+      'Eligible stations: ' + eligible +
+      ' | Reported: ' + reported +
+      ' | Outstanding: ' + outstanding;
+
+    rankings.replaceChildren();
+
+    if (data.candidate_totals.length === 0) {
+      rankings.textContent = 'No registered contestants found.';
+    } else {
+      data.candidate_totals.forEach((candidate, index) => {
+        const row = document.createElement('p');
+        row.textContent =
+          (index + 1) + '. ' +
+          String(candidate.candidate_name || 'Unnamed contestant') +
+          ' — ' + Number(candidate.votes || 0) + ' votes';
+
+        rankings.appendChild(row);
+      });
+    }
+
+    updated.textContent = data.last_received_at
+      ? 'Latest included server receipt: ' +
+        new Date(data.last_received_at).toLocaleString()
+      : 'No eligible locked reports received yet.';
+
+  } catch (error) {
+    console.error('Could not load live results:', error);
+    message.textContent = 'Live results could not be loaded.';
+    progress.textContent = 'Station progress is unavailable.';
+    rankings.textContent = 'Candidate rankings are unavailable.';
+    updated.textContent = 'Please try again later.';
+  }
+  }
+  
+
   async function loadClientCampaign() {
   const nameElement = document.getElementById('clientAspirantName');
   const areaElement = document.getElementById('clientCampaignArea');
