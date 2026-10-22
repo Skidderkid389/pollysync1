@@ -2380,6 +2380,55 @@ const pollySyncDB = window.supabase.createClient(
 );
 
 console.log('PollySync Supabase client initialized.');
+  window.addEventListener('load', async function () {
+  const hashParams = new URLSearchParams(
+    window.location.hash.substring(1)
+  );
+  const queryParams = new URLSearchParams(
+    window.location.search
+  );
+
+  const inviteType = hashParams.get('type');
+  const hasAuthCode = queryParams.has('code');
+
+  if (
+    inviteType === 'invite' ||
+    inviteType === 'recovery' ||
+    hasAuthCode
+  ) {
+    return;
+  }
+
+  try {
+    const { data: sessionData, error: sessionError } =
+      await pollySyncDB.auth.getSession();
+
+    if (sessionError || !sessionData?.session) return;
+
+    const userId = sessionData.session.user.id;
+
+    const { data: profile, error: profileError } =
+      await pollySyncDB
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single();
+
+    if (
+      profileError ||
+      !profile ||
+      !['owner', 'client', 'agent'].includes(profile.role)
+    ) {
+      return;
+    }
+
+    signedInRole = profile.role;
+    document.getElementById('role').value = profile.role;
+    openPortal();
+  } catch (error) {
+    console.error('Session restoration failed:', error);
+  }
+});
   
 async function registerContestant() {
   const nameInput = document.getElementById('contestantName');
