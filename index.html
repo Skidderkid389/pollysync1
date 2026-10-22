@@ -179,16 +179,28 @@ height:120px;
       .eq('id', userId)
       .single();
 
-  if (
-    profileError ||
-    !profile ||
-    profile.role !== 'agent' ||
-    profile.assigned_station_id !== report.station_id
-  ) {
-    throw new Error(
-      'Your account or assigned station could not be verified.'
-    );
+  
+  if (profileError) {
+    console.error('Draft profile lookup failed:', profileError);
+    throw new Error('Could not read your agent profile. Please check your connection and permissions.');
   }
+
+  if (!profile) {
+    throw new Error('No agent profile was found for your account.');
+  }
+
+  if (profile.role !== 'agent') {
+    throw new Error('Your account is not registered as a polling agent.');
+  }
+
+  if (profile.assigned_station_id !== report.station_id) {
+    console.error('Draft station mismatch:', {
+      profileStationId: profile.assigned_station_id,
+      reportStationId: report.station_id
+    });
+    throw new Error('Your assigned station does not match this report. Please refresh the agent portal.');
+  }
+  
 
   if (!window.agentSubmissionClientId) {
     if (!window.crypto || !crypto.randomUUID) {
