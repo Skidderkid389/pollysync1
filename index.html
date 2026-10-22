@@ -388,6 +388,11 @@ height:120px;
   }).join('');
   }
 
+
+
+
+
+
 async function loadOwnerPaymentRequests() {
   const container = document.getElementById('ownerPaymentRequests');
 
@@ -512,8 +517,7 @@ async function loadOwnerPaymentRequests() {
   }
 
 
-
-  async function reviewStationPayment(requestId, approve) {
+    async function reviewStationPayment(requestId, approve) {
   const action = approve ? 'approve' : 'reject';
 
   const confirmed = confirm(
@@ -636,78 +640,6 @@ async function saveDefaultStationPrice() {
   await loadStationBilling();
   }
 
-  
-async function loadClientLiveResults() {
-  const message = document.getElementById('clientLiveResultsMessage');
-  const progress = document.getElementById('clientLiveStationProgress');
-  const rankings = document.getElementById('clientLiveCandidateRankings');
-  const updated = document.getElementById('clientLiveLastUpdated');
-
-  if (!message || !progress || !rankings || !updated) {
-    return;
-  }
-
-  message.textContent = 'Loading provisional campaign results...';
-  progress.textContent = 'Loading station progress...';
-  rankings.textContent = 'Loading candidate rankings...';
-  updated.textContent = 'Retrieving latest server results...';
-
-  try {
-    const { data, error } = await pollySyncDB.rpc(
-      'get_client_live_results'
-    );
-
-    if (error) {
-      throw error;
-    }
-
-    if (!data || !Array.isArray(data.candidate_totals)) {
-      throw new Error('The results response was incomplete.');
-    }
-
-    message.textContent =
-      'Provisional PollySync reports — not official IEBC results.';
-
-    const stationData = data.stations || {};
-    const eligible = Number(stationData.eligible || 0);
-    const reported = Number(stationData.reported || 0);
-    const outstanding = Number(stationData.outstanding || 0);
-
-    progress.textContent =
-      'Eligible stations: ' + eligible +
-      ' | Reported: ' + reported +
-      ' | Outstanding: ' + outstanding;
-
-    rankings.replaceChildren();
-
-    if (data.candidate_totals.length === 0) {
-      rankings.textContent = 'No registered contestants found.';
-    } else {
-      data.candidate_totals.forEach((candidate, index) => {
-        const row = document.createElement('p');
-        row.textContent =
-          (index + 1) + '. ' +
-          String(candidate.candidate_name || 'Unnamed contestant') +
-          ' — ' + Number(candidate.votes || 0) + ' votes';
-
-        rankings.appendChild(row);
-      });
-    }
-
-    updated.textContent = data.last_received_at
-      ? 'Latest included server receipt: ' +
-        new Date(data.last_received_at).toLocaleString()
-      : 'No eligible locked reports received yet.';
-
-  } catch (error) {
-    console.error('Could not load live results:', error);
-    message.textContent = 'Live results could not be loaded.';
-    progress.textContent = 'Station progress is unavailable.';
-    rankings.textContent = 'Candidate rankings are unavailable.';
-    updated.textContent = 'Please try again later.';
-  }
-  }
-  
   async function loadClientCampaign() {
   const nameElement = document.getElementById('clientAspirantName');
   const areaElement = document.getElementById('clientCampaignArea');
@@ -1045,8 +977,7 @@ async function loadClientStations() {
   }
 }
 
-
-  async function loadStationPaymentQuote() {
+    async function loadStationPaymentQuote() {
   const summary = document.getElementById('paymentSummary');
   const button = document.getElementById('submitStationPaymentButton');
 
@@ -1411,9 +1342,9 @@ function showOwnerSection(sectionId) {
       button.getAttribute('onclick').includes(sectionId)
     );
   });
-}
+  }
 
-function openPortal(){
+  function openPortal(){
   const role=document.getElementById('role').value;
 
   if (!signedInRole || role !== signedInRole) {
@@ -1754,32 +1685,13 @@ if(ownerProfileArea) ownerProfileArea.style.display='none';
   <div id="clientContestantList">Loading contestants...</div>
 </div>
   
-  
-  <div class="card" id="clientLiveResultsSection">
-    <h3>Live Results &amp; Reports</h3>
-    <p class="muted">
-      Provisional PollySync campaign reports. These are not official IEBC results.
-    </p>
+  <div class="card">
+        <h3>Results &amp; Reports</h3>
+        <p>Your campaign results and downloadable report will appear here once database integration is complete.</p>
 
-    <div id="clientLiveResultsMessage" role="status">
-      Live results have not been loaded yet.
-    </div>
-
-    <h4>Station Reporting Progress</h4>
-    <div id="clientLiveStationProgress">
-      Awaiting database connection.
-    </div>
-
-    <h4>Candidate Rankings</h4>
-    <div id="clientLiveCandidateRankings">
-      Awaiting database connection.
-    </div>
-
-    <p class="muted" id="clientLiveLastUpdated">
-      No results retrieved yet.
-    </p>
-  </div>
-  
+        <p class="muted">Your campaign data should remain accessible only to authorised users.</p>
+      </div>
+<p class="muted">Your campaign photo, polling stations, incoming results and automatic rankings will appear here after database integration.</p>`;
     loadClientCampaign();
     loadClientStations();
     loadStationPaymentQuote();
@@ -1823,8 +1735,7 @@ loadAgentContestants();
   portal.classList.remove('hidden');
 }
 
-
-function previewResult(){
+  function previewResult(){
   const station =
     document.getElementById('assignedStation').textContent.trim();
   const votersText =
@@ -2060,8 +1971,8 @@ async function submitAgentResult() {
         p_official_form_reference: report.official_form_reference
       }
     );
-  
-    
+
+
       if (error) throw error;
 
     if (!data || !data.submission_id || !data.server_received_at) {
@@ -2349,8 +2260,7 @@ async function loadAgentAssignment() {
 
 
 
-
-async function activateCampaignLicence(campaignId) {
+  async function activateCampaignLicence(campaignId) {
   const newExpiry = prompt(
     'Enter the new licence expiry date (YYYY-MM-DD):'
   );
