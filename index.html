@@ -760,6 +760,157 @@ if (successBox && contest) {
     statusElement.textContent = 'Unavailable';
   }
 }
+ 
+
+async function loadClientResults() {
+  const message = document.getElementById('clientResultsMessage');
+  const list = document.getElementById('clientResultsList');
+
+  if (!message || !list) return;
+
+  message.textContent = 'Loading campaign results...';
+  list.replaceChildren();
+
+  try {
+    const { data: sessionData, error: sessionError } =
+      await pollySyncDB.auth.getSession();
+
+    if (sessionError || !sessionData.session) {
+      message.textContent = 'Please sign in again to view results.';
+      return;
+    }
+
+    const userId = sessionData.session.user.id;
+
+    const { data: profile, error: profileError } =
+      await pollySyncDB
+        .from('profiles')
+        .select('campaign_id')
+        .eq('id', userId)
+        .single();
+
+    if (profileError || !profile || !profile.campaign_id) {
+      message.textContent = 'No campaign is assigned to this account.';
+      return;
+    }
+
+    const { data: campaign, error: campaignError } =
+      await pollySyncDB
+        .from('campaigns')
+        .select('contest_id')
+        .eq('id', profile.campaign_id)
+        .single();
+
+    if (campaignError || !campaign || !campaign.contest_id) {
+      message.textContent = 'Could not identify your electoral contest.';
+      return;
+    }
+
+    const { data: results, error: resultsError } =
+      await pollySyncDB
+        .from('result_submissions')
+        .select('id, station_id, status, server_received_at, total_votes, candidate_votes, presiding_officer_name, official_form_reference')
+        .eq('campaign_id', profile.campaign_id)
+        .in('status', ['submitted', 'locked'])
+        .order('server_received_at', { ascending: false });
+
+    if (resultsError) throw resultsError;
+
+    if (!results || results.length === 0) {
+      message.textContent =
+        'No submitted results are available for this campaign yet.';
+      return;
+    }
+
+    const { data: candidates, error: candidatesError } =
+      await pollySyncDB
+        .from('candidates')
+        .select('id, candidate_name')
+        .eq('contest_id', campaign.contest_id);
+
+    if (candidatesError) throw candidatesError;
+
+    const { data: stations, error: stationsError } =
+      await pollySyncDB
+        .from('polling_stations')
+        .select('id, station_name')
+        .eq('campaign_id', profile.campaign_id);
+
+    if (stationsError) throw stationsError;
+
+    const candidateNames = {};
+    (candidates || []).forEach(candidate => {
+      candidateNames[candidate.id] = candidate.candidate_name;
+    });
+
+    const stationNames = {};
+    (stations || []).forEach(station => {
+      stationNames[station.id] = station.station_name;
+    });
+
+    results.forEach(result => {
+      const card = document.createElement('div');
+      card.className = 'card';
+
+      const heading = document.createElement('h4');
+      heading.textContent =
+        stationNames[result.station_id] || 'Polling station';
+      card.appendChild(heading);
+
+      const status = document.createElement('p');
+      status.textContent = 'Submission status: ' + result.status;
+      card.appendChild(status);
+
+      const received = document.createElement('p');
+      received.textContent = 'Received: ' +
+        (result.server_received_at
+          ? new Date(result.server_received_at).toLocaleString('en-KE', {
+              timeZone: 'Africa/Nairobi'
+            })
+          : 'Not available');
+      card.appendChild(received);
+
+      const total = document.createElement('p');
+      total.textContent = 'Total votes: ' +
+        (result.total_votes ?? 'Not available');
+      card.appendChild(total);
+
+      const form = document.createElement('p');
+      form.textContent = 'Official form reference: ' +
+        (result.official_form_reference || 'Not provided');
+      card.appendChild(form);
+
+      const voteHeading = document.createElement('h5');
+      voteHeading.textContent = 'Candidate votes';
+      card.appendChild(voteHeading);
+
+      const voteList = document.createElement('ol');
+      const voteItems = result.candidate_votes?.candidates || [];
+
+      voteItems
+        .slice()
+        .sort((a, b) => (b.votes || 0) - (a.votes || 0))
+        .forEach(item => {
+          const voteItem = document.createElement('li');
+          const name = candidateNames[item.candidate_id] ||
+            'Candidate name unavailable';
+          voteItem.textContent = name + ': ' + item.votes + ' votes';
+          voteList.appendChild(voteItem);
+        });
+
+      card.appendChild(voteList);
+      list.appendChild(card);
+    });
+
+    message.textContent =
+      results.length + ' submission(s) found. Candidate votes are ranked within each station; campaign-wide rankings are not yet calculated.';
+  } catch (error) {
+    console.error('Could not load client results:', error);
+    message.textContent =
+      'Unable to load results. Please try again later.';
+  }
+  }
+  
   
   
 async function registerClientStation() {
@@ -1689,16 +1840,31 @@ if(ownerProfileArea) ownerProfileArea.style.display='none';
   <div id="clientContestantList">Loading contestants...</div>
 </div>
   
+  
   <div class="card">
-        <h3>Results &amp; Reports</h3>
-        <p>Your campaign results and downloadable report will appear here once database integration is complete.</p>
+    <h3>Results &amp; Reports</h3>
+    <p class="muted">
+      View results received from your polling agents for your campaign.
+    </p>
 
-        <p class="muted">Your campaign data should remain accessible only to authorised users.</p>
-      </div>
-<p class="muted">Your campaign photo, polling stations, incoming results and automatic rankings will appear here after database integration.</p>`;
+    <div id="clientResultsMessage" class="muted" role="status">
+      Loading campaign results...
+    </div>
+
+    <div id="clientResultsList">
+      Results will appear here once connected.
+    </div>
+
+    <p class="muted">
+      Your campaign results are accessible only to authorised users.
+    </p>
+  </div>
+  
     loadClientCampaign();
+    loadClientResults();
     loadClientStations();
     loadStationPaymentQuote();
+    
   }else{
     type.textContent='POLLYSYNC · POLLING AGENT PORTAL';
     title.textContent='Agent Portal';
