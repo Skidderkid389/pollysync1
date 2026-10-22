@@ -1687,13 +1687,32 @@ if(ownerProfileArea) ownerProfileArea.style.display='none';
   <div id="clientContestantList">Loading contestants...</div>
 </div>
   
-  <div class="card">
-        <h3>Results &amp; Reports</h3>
-        <p>Your campaign results and downloadable report will appear here once database integration is complete.</p>
+  
+  <div class="card" id="clientLiveResultsSection">
+    <h3>Live Results &amp; Reports</h3>
+    <p class="muted">
+      Provisional PollySync campaign reports. These are not official IEBC results.
+    </p>
 
-        <p class="muted">Your campaign data should remain accessible only to authorised users.</p>
-      </div>
-<p class="muted">Your campaign photo, polling stations, incoming results and automatic rankings will appear here after database integration.</p>`;
+    <div id="clientLiveResultsMessage" role="status">
+      Live results have not been loaded yet.
+    </div>
+
+    <h4>Station Reporting Progress</h4>
+    <div id="clientLiveStationProgress">
+      Awaiting database connection.
+    </div>
+
+    <h4>Candidate Rankings</h4>
+    <div id="clientLiveCandidateRankings">
+      Awaiting database connection.
+    </div>
+
+    <p class="muted" id="clientLiveLastUpdated">
+      No results retrieved yet.
+    </p>
+  </div>
+  
     loadClientCampaign();
     loadClientStations();
     loadStationPaymentQuote();
