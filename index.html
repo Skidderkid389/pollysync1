@@ -1924,9 +1924,9 @@ async function submitAgentResult() {
   } catch (error) {
     console.error('Agent result submission failed:', error);
     summary.textContent =
-      'Receipt has not been confirmed. Check your connection and ' +
-      'retry the same report without changing its figures. ' +
-      'Submission ID: ' + window.agentSubmissionClientId;
+      'Submission failed: ' +
+      (error.message || String(error)) +
+      '. Submission ID: ' + window.agentSubmissionClientId;
   } finally {
     window.agentSubmissionInFlight = false;
   }
