@@ -1902,7 +1902,14 @@ async function confirmAgentResult() {
     official_form_reference:
       document.getElementById('officialFormReference').value.trim()
   };
-
+  try {
+    await saveAgentPreparedDraft(window.agentPreparedSubmission);
+  } catch (error) {
+    summary.textContent =
+      'Draft could not be saved: ' + error.message +
+      ' Your figures remain on this screen. Please try again.';
+    return;
+  }
   summary.innerHTML =
     '<p class="notice">Figures confirmed for submission preparation. ' +
     'Nothing has been sent to the server yet.</p>' +
