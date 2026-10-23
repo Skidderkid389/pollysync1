@@ -353,8 +353,16 @@
           }).join('')
         : '<p>No reports are available for paid, active stations yet.</p>';
 
-      container.innerHTML = `
-        ${summaryHTML}
+      
+const summaryContainer =
+  document.getElementById('clientResultsSummary');
+
+if (summaryContainer) {
+  summaryContainer.innerHTML = summaryHTML;
+}
+
+container.innerHTML = `
+       
 
         <h4>Candidate Rankings</h4>
 
