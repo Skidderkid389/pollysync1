@@ -1685,13 +1685,13 @@ if(ownerProfileArea) ownerProfileArea.style.display='none';
   <div id="clientContestantList">Loading contestants...</div>
 </div>
   
-  <div class="card">
-        <h3>Results &amp; Reports</h3>
-        <p>Your campaign results and downloadable report will appear here once database integration is complete.</p>
+  
+  <div class="card" id="clientResultsCard">
+    <h3>Results &amp; Reports</h3>
+    <p class="muted">Your campaign results and downloadable report will appear here.</p>
+    <div id="clientResultsContent">Results will load when this portal opens.</div>
+  </div>`;
 
-        <p class="muted">Your campaign data should remain accessible only to authorised users.</p>
-      </div>
-<p class="muted">Your campaign photo, polling stations, incoming results and automatic rankings will appear here after database integration.</p>`;
     loadClientCampaign();
     loadClientStations();
     loadStationPaymentQuote();
