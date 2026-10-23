@@ -523,6 +523,217 @@ async function loadOwnerPaymentRequests() {
   }
 
 
+async function loadOwnerLicencePayments() {
+  const container = document.getElementById(
+    'ownerLicencePaymentRequests'
+  );
+
+  if (!container) return;
+
+  container.textContent = 'Loading campaign licence payments...';
+
+  try {
+    const { data: requests, error } = await pollySyncDB
+      .from('campaign_licence_payments')
+      .select(
+        'id, campaign_id, mpesa_receipt, amount_kes, payment_status, submitted_at'
+      )
+      .order('submitted_at', { ascending: false });
+
+    if (error) throw error;
+
+    if (!requests || requests.length === 0) {
+      container.textContent =
+        'No campaign licence payments submitted yet.';
+      return;
+    }
+
+    const { data: campaigns, error: campaignError } =
+      await pollySyncDB
+        .from('campaigns')
+        .select('id, aspirant_name, client_email');
+
+    if (campaignError) throw campaignError;
+
+    const campaignMap = new Map(
+      (campaigns || []).map(campaign => [
+        campaign.id,
+        campaign
+      ])
+    );
+
+    const safe = value =>
+      String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      })[char]);
+
+    container.innerHTML = requests.map(request => {
+      const campaign = campaignMap.get(request.campaign_id);
+      const status = String(
+        request.payment_status || 'pending'
+      ).toLowerCase();
+
+      const requestId = safe(request.id);
+      const pending = status === 'pending';
+
+      const reviewControls = pending ? `
+        <label for="licenceVerifyCode_${requestId}">
+          Enter code from received M-Pesa confirmation
+        </label>
+        <input
+          id="licenceVerifyCode_${requestId}"
+          type="text"
+          maxlength="80"
+          autocomplete="off"
+          placeholder="Enter received M-Pesa code">
+
+        <label for="licenceExpiry_${requestId}">
+          Licence expiry date
+        </label>
+        <input
+          id="licenceExpiry_${requestId}"
+          type="date">
+
+        <label for="licenceReviewNote_${requestId}">
+          Review note (optional)
+        </label>
+        <input
+          id="licenceReviewNote_${requestId}"
+          type="text"
+          maxlength="250"
+          placeholder="Optional note">
+
+        <button
+          type="button"
+          onclick="reviewCampaignLicencePayment('${requestId}', 'approved')">
+          Verify Code & Approve
+        </button>
+
+        <button
+          type="button"
+          onclick="reviewCampaignLicencePayment('${requestId}', 'rejected')">
+          Reject Payment
+        </button>
+
+        <p id="licenceReviewMessage_${requestId}" role="status"></p>
+      ` : '';
+
+      return `
+        <div class="tile">
+          <strong>${safe(campaign?.aspirant_name || 'Unknown campaign')}</strong>
+          <p>Client: ${safe(campaign?.client_email || 'Not provided')}</p>
+          <p>Amount: KSh ${safe(request.amount_kes)}</p>
+          <p>Client's M-Pesa code: ${safe(request.mpesa_receipt)}</p>
+          <p>Submitted: ${safe(request.submitted_at)}</p>
+          <p>Status: ${safe(status.toUpperCase())}</p>
+          ${reviewControls}
+        </div>
+      `;
+    }).join('');
+
+  } catch (error) {
+    console.error('Could not load campaign licence payments:', error);
+    container.textContent =
+      'Could not load licence payments. Please refresh and try again.';
+  }
+}
+
+
+async function reviewCampaignLicencePayment(requestId, decision) {
+  const message = document.getElementById(
+    `licenceReviewMessage_${requestId}`
+  );
+
+  const showMessage = text => {
+    if (message) message.textContent = text;
+  };
+
+  const approved = decision === 'approved';
+
+  let verifiedCode = null;
+  let expiryDate = null;
+  let reviewNote = null;
+
+  if (approved) {
+    verifiedCode = document.getElementById(
+      `licenceVerifyCode_${requestId}`
+    )?.value.trim();
+
+    expiryDate = document.getElementById(
+      `licenceExpiry_${requestId}`
+    )?.value;
+
+    if (!verifiedCode) {
+      showMessage('Enter the M-Pesa code from the confirmation you received.');
+      return;
+    }
+
+    if (!expiryDate) {
+      showMessage('Choose the campaign licence expiry date.');
+      return;
+    }
+
+    reviewNote = document.getElementById(
+      `licenceReviewNote_${requestId}`
+    )?.value.trim() || null;
+
+    if (!confirm(
+      'Approve this KSh 5,000 campaign licence payment? The campaign will be activated with the selected expiry date.'
+    )) {
+      return;
+    }
+  } else if (decision === 'rejected') {
+    reviewNote = document.getElementById(
+      `licenceReviewNote_${requestId}`
+    )?.value.trim() || null;
+
+    if (!confirm('Reject this campaign licence payment?')) {
+      return;
+    }
+  } else {
+    showMessage('Invalid review decision.');
+    return;
+  }
+
+  showMessage('Processing your decision...');
+
+  try {
+    const { error } = await pollySyncDB.rpc(
+      'owner_review_campaign_licence_payment',
+      {
+        p_payment_id: requestId,
+        p_decision: decision,
+        p_expiry_date: expiryDate,
+        p_review_note: reviewNote,
+        p_verified_receipt: verifiedCode
+      }
+    );
+
+    if (error) throw error;
+
+    showMessage(
+      approved
+        ? 'Payment approved and campaign licence activated.'
+        : 'Payment rejected.'
+    );
+
+    await loadOwnerLicencePayments();
+    await loadCampaignCount();
+  } catch (error) {
+    console.error('Could not review campaign licence payment:', error);
+    showMessage(
+      `Could not complete the review: ${error.message || 'Please try again.'}`
+    );
+  }
+}
+
+
+
+
     async function reviewStationPayment(requestId, approve) {
   const action = approve ? 'approve' : 'reject';
 
@@ -1385,6 +1596,7 @@ if(ownerProfileArea) ownerProfileArea.style.display='none';
   <button type="button" onclick="showOwnerSection('campaignsSection')">Campaigns & Licences</button>
   <button type="button" onclick="showOwnerSection('billingSection')">Stations & Billing</button>
   <button type="button" onclick="showOwnerSection('paymentsSection')">Payment Requests</button>
+<button type="button" onclick="showOwnerSection('licencePaymentsSection')">Licence Payments</button>
   <button type="button" onclick="showOwnerSection('pricingSection')">Platform Pricing</button>
 </div>
 
@@ -1412,7 +1624,17 @@ if(ownerProfileArea) ownerProfileArea.style.display='none';
     Loading payment requests...
   </div>
 </div>
-  <div class="card owner-section" id="pricingSection">
+<div class="card owner-section" id="licencePaymentsSection">
+  <h3>Campaign Licence Payments</h3>
+  <p class="muted">
+    Review KSh 5,000 campaign licence payments separately from station payments.
+    Verify the M-Pesa code before approving or rejecting a request.
+  </p>
+  <div id="ownerLicencePaymentRequests">
+    Loading campaign licence payments...
+  </div>
+</div>
+ <div class="card owner-section" id="pricingSection">
   <h3>Platform Pricing</h3>
   <p class="muted">Set the standard fee charged per polling station.</p>
 
@@ -1477,6 +1699,7 @@ if(ownerProfileArea) ownerProfileArea.style.display='none';
         loadCampaignCount();
     loadStationBilling();
     loadOwnerPaymentRequests();
+loadOwnerLicencePayments();
     showOwnerSection('campaignsSection');
 
     // Owner profile photo
