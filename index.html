@@ -1378,10 +1378,9 @@ updateContestLocationFields();
   const ward = document.getElementById('contestWard').value.trim();
   const email = document.getElementById('clientEmail').value.trim();
   const code = document.getElementById('clientCode').value.trim();
-  const expiry = document.getElementById('licenceExpiry').value;
   const message = document.getElementById('campaignMessage');
 
-  if (!name || !position || !county || !email || !code || !expiry) {
+  if (!name || !position || !county || !email || !code) {
     message.textContent = 'Please fill in all required fields.';
     return;
   }
@@ -1458,7 +1457,6 @@ updateContestLocationFields();
       client_email: email,
       campaign_area: area,
       client_code: code,
-      licence_expiry: expiry,
       contest_id: contest.id
     });
 
@@ -1480,12 +1478,11 @@ updateContestLocationFields();
 
   document.getElementById('clientEmail').value = '';
   document.getElementById('clientCode').value = '';
-  document.getElementById('licenceExpiry').value = '';
   }
 
 
   async function signInToPollySync() {
-  const email = document.getElementById('loginEmail').value.trim();
+ to const email = document.getElementById('loginEmail').value.trim();
   const password = document.getElementById('loginPassword').value;
   const message = document.getElementById('loginMessage');
 
@@ -1694,8 +1691,6 @@ if(ownerProfileArea) ownerProfileArea.style.display='none';
 <input id="clientEmail" type="email" placeholder="Enter client's email address"><label for="clientCode">Client Code</label>
   <input id="clientCode" type="text" placeholder="Create a unique code">
 
-  <label for="licenceExpiry">Licence Expiry Date</label>
-  <input id="licenceExpiry" type="date">
 
   <button type="button" onclick="registerCampaign()">Register Campaign</button>
   <p id="campaignMessage" class="muted"></p>
