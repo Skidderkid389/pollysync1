@@ -1370,7 +1370,7 @@ updateContestLocationFields();
 
 
 
-  async function registerCampaign() {
+async function registerCampaign() {
   const name = document.getElementById('aspirantName').value.trim();
   const position = document.getElementById('contestPosition').value;
   const county = document.getElementById('contestCounty').value.trim();
@@ -1378,9 +1378,10 @@ updateContestLocationFields();
   const ward = document.getElementById('contestWard').value.trim();
   const email = document.getElementById('clientEmail').value.trim();
   const code = document.getElementById('clientCode').value.trim();
+  const expiry = document.getElementById('licenceExpiry').value;
   const message = document.getElementById('campaignMessage');
 
-  if (!name || !position || !county || !email || !code) {
+  if (!name || !position || !county || !email || !code || !expiry) {
     message.textContent = 'Please fill in all required fields.';
     return;
   }
@@ -1457,6 +1458,7 @@ updateContestLocationFields();
       client_email: email,
       campaign_area: area,
       client_code: code,
+      licence_expiry: expiry,
       contest_id: contest.id
     });
 
@@ -1478,7 +1480,8 @@ updateContestLocationFields();
 
   document.getElementById('clientEmail').value = '';
   document.getElementById('clientCode').value = '';
-  }
+  document.getElementById('licenceExpiry').value = '';
+}
 
 
   async function signInToPollySync() {
@@ -1582,7 +1585,8 @@ const welcome=document.getElementById('welcome');
   const ownerProfileArea=document.getElementById('ownerProfileArea');
 if(ownerProfileArea) ownerProfileArea.style.display='none';
 
-  if(role==='owner'){
+  
+if(role==='owner'){
     if(ownerProfileArea) ownerProfileArea.style.display='block';
     type.textContent='POLLYSYNC · PLATFORM ADMINISTRATION';
     title.textContent='Welcome, Kelvin Kipruto Kemboi!';
@@ -1597,25 +1601,20 @@ if(ownerProfileArea) ownerProfileArea.style.display='none';
   <button type="button" onclick="showOwnerSection('campaignsSection')">Campaigns & Licences</button>
   <button type="button" onclick="showOwnerSection('billingSection')">Stations & Billing</button>
   <button type="button" onclick="showOwnerSection('paymentsSection')">Payment Requests</button>
-<button type="button" onclick="showOwnerSection('licencePaymentsSection')">Licence Payments</button>
+  <button type="button" onclick="showOwnerSection('licencePaymentsSection')">Licence Payments</button>
   <button type="button" onclick="showOwnerSection('pricingSection')">Platform Pricing</button>
 </div>
 
 <div class="tiles">
-  
-        <div class="tile">Campaigns<strong id="campaignCount">0</strong></div>
-      </div>
-      
-      
-      <div class="card owner-section" id="billingSection">
+  <div class="tile">Campaigns<strong id="campaignCount">0</strong></div>
+</div>
+
+<div class="card owner-section" id="billingSection">
   <h3>Polling Stations & Billing</h3>
   <p class="muted">Station counts, payment status and amounts due will appear here.</p>
   <div id="stationBillingList">Loading station billing...</div>
-  </div>
-  
+</div>
 
-
-  
 <div class="card owner-section" id="paymentsSection">
   <h3>Polling Station Payment Requests</h3>
   <p class="muted">
@@ -1625,6 +1624,7 @@ if(ownerProfileArea) ownerProfileArea.style.display='none';
     Loading payment requests...
   </div>
 </div>
+
 <div class="card owner-section" id="licencePaymentsSection">
   <h3>Campaign Licence Payments</h3>
   <p class="muted">
@@ -1635,7 +1635,8 @@ if(ownerProfileArea) ownerProfileArea.style.display='none';
     Loading campaign licence payments...
   </div>
 </div>
- <div class="card owner-section" id="pricingSection">
+
+<div class="card owner-section" id="pricingSection">
   <h3>Platform Pricing</h3>
   <p class="muted">Set the standard fee charged per polling station.</p>
 
@@ -1652,8 +1653,9 @@ if(ownerProfileArea) ownerProfileArea.style.display='none';
     Save Default Price
   </button>
 
-    <p id="pricingMessage" class="muted"></p>
+  <p id="pricingMessage" class="muted"></p>
 </div>
+
 <div class="card owner-section" id="campaignsSection">
   <h3>Registered Campaigns</h3>
   <div id="campaignList">Loading campaigns...</div>
@@ -1665,40 +1667,41 @@ if(ownerProfileArea) ownerProfileArea.style.display='none';
   <label for="aspirantName">Aspirant Full Name</label>
   <input id="aspirantName" type="text" placeholder="Enter full name">
 
-  
-<label for="contestPosition">Electoral Position</label>
-<select id="contestPosition">
-  <option value="">Select position</option>
-  <option value="MCA">MCA</option>
-  <option value="MP">Member of Parliament (MP)</option>
-  <option value="Senator">Senator</option>
-  <option value="Women Representative">Women Representative</option>
-  <option value="Governor">Governor</option>
-</select>
+  <label for="contestPosition">Electoral Position</label>
+  <select id="contestPosition">
+    <option value="">Select position</option>
+    <option value="MCA">MCA</option>
+    <option value="MP">Member of Parliament (MP)</option>
+    <option value="Senator">Senator</option>
+    <option value="Women Representative">Women Representative</option>
+    <option value="Governor">Governor</option>
+  </select>
 
-<label for="contestCounty">County</label>
-<input id="contestCounty" type="text" placeholder="Enter county">
+  <label for="contestCounty">County</label>
+  <input id="contestCounty" type="text" placeholder="Enter county">
 
-<label for="contestConstituency">Constituency</label>
-<input id="contestConstituency" type="text" placeholder="Enter constituency">
+  <label for="contestConstituency">Constituency</label>
+  <input id="contestConstituency" type="text" placeholder="Enter constituency">
 
-<label for="contestWard">Ward</label>
-<input id="contestWard" type="text" placeholder="Enter ward">
-  
+  <label for="contestWard">Ward</label>
+  <input id="contestWard" type="text" placeholder="Enter ward">
 
-  
   <label for="clientEmail">Client Email Address</label>
-<input id="clientEmail" type="email" placeholder="Enter client's email address"><label for="clientCode">Client Code</label>
+  <input id="clientEmail" type="email" placeholder="Enter client's email address">
+
+  <label for="clientCode">Client Code</label>
   <input id="clientCode" type="text" placeholder="Create a unique code">
 
+  <label for="licenceExpiry">Licence Expiry Date</label>
+  <input id="licenceExpiry" type="date">
 
   <button type="button" onclick="registerCampaign()">Register Campaign</button>
   <p id="campaignMessage" class="muted"></p>
 </div>`;
-        loadCampaignCount();
+    loadCampaignCount();
     loadStationBilling();
     loadOwnerPaymentRequests();
-loadOwnerLicencePayments();
+    loadOwnerLicencePayments();
     showOwnerSection('campaignsSection');
 
     // Owner profile photo
@@ -1757,6 +1760,8 @@ loadOwnerLicencePayments();
         reader.readAsDataURL(file);
       };
     }
+}
+
 
   }else if(role==='client'){
     type.textContent='POLLYSYNC · CAMPAIGN MANAGEMENT';
