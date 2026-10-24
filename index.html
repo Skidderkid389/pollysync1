@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -232,8 +233,9 @@ height:120px;
 
   localStorage.setItem(storageKey, JSON.stringify(draft));
   }
+  
 
-  async function loadCampaignCount() {
+async function loadCampaignCount() {
   const { count, error } = await pollySyncDB
     .from('campaigns')
     .select('*', { count: 'exact', head: true });
@@ -309,7 +311,7 @@ height:120px;
 
 
 
-  async function loadStationBilling() {
+async function loadStationBilling() {
   const listElement = document.getElementById('stationBillingList');
 
   if (!listElement) return;
@@ -734,9 +736,7 @@ async function reviewCampaignLicencePayment(requestId, decision) {
 }
 
 
-
-
-    async function reviewStationPayment(requestId, approve) {
+async function reviewStationPayment(requestId, approve) {
   const action = approve ? 'approve' : 'reject';
 
   const confirmed = confirm(
@@ -773,7 +773,7 @@ async function reviewCampaignLicencePayment(requestId, decision) {
     );
   }
 }
-
+  
 async function ownerVerifyStationPayment(requestId) {
   const input = document.getElementById(
     `ownerReceipt_${requestId}`
@@ -1195,7 +1195,9 @@ async function loadClientStations() {
         list.textContent = 'An unexpected error occurred while loading stations.';
   }
   }
-      async function loadStationPaymentQuote() {
+  
+
+async function loadStationPaymentQuote() {
   const summary = document.getElementById('paymentSummary');
   const button = document.getElementById('submitStationPaymentButton');
 
@@ -1250,7 +1252,7 @@ async function loadClientStations() {
 
 
 
-  async function submitStationPaymentRequest() {
+async function submitStationPaymentRequest() {
   const receiptInput = document.getElementById('mpesaReceipt');
   const message = document.getElementById('paymentRequestMessage');
   const button = document.getElementById('submitStationPaymentButton');
@@ -1480,8 +1482,7 @@ async function registerCampaign() {
   document.getElementById('licenceExpiry').value = '';
 }
 
-
-  async function signInToPollySync() {
+async function signInToPollySync() {
  to const email = document.getElementById('loginEmail').value.trim();
   const password = document.getElementById('loginPassword').value;
   const message = document.getElementById('loginMessage');
@@ -1562,7 +1563,7 @@ function showOwnerSection(sectionId) {
   });
   }
 
-  function openPortal(){
+function openPortal(){
   const role=document.getElementById('role').value;
 
   if (!signedInRole || role !== signedInRole) {
@@ -2042,9 +2043,8 @@ function backToClientMenu() {
     menuButton.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
-
-
-  function previewResult(){
+  
+function previewResult(){
   const station =
     document.getElementById('assignedStation').textContent.trim();
   const votersText =
@@ -2306,7 +2306,7 @@ async function submitAgentResult() {
   }
   }
 
-  function showAgentCancellationWindow(data) {
+function showAgentCancellationWindow(data) {
   const summary = document.getElementById('summary');
   const deadline = Date.parse(data.cancellation_deadline);
 
@@ -2567,7 +2567,7 @@ async function loadAgentAssignment() {
 
 
 
-  async function activateCampaignLicence(campaignId) {
+async function activateCampaignLicence(campaignId) {
   const newExpiry = prompt(
     'Enter the new licence expiry date (YYYY-MM-DD):'
   );
