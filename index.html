@@ -1287,6 +1287,21 @@ async function loadStationPaymentQuote() {
   }
 
 
+async function copyStationMpesaNumber() {
+  const number = '0722722617';
+  const message = document.getElementById('mpesaCopyMessage');
+
+  try {
+    await navigator.clipboard.writeText(number);
+    message.textContent = 'M-Pesa number copied! You can now paste it.';
+  } catch (error) {
+    message.textContent =
+      'Copy unavailable. Please copy the number manually: ' + number;
+  }
+}
+
+
+
 
 async function loadClientPaymentRequestStatus() {
   const container = document.getElementById('clientPaymentRequestStatus');
@@ -1869,6 +1884,18 @@ loadOwnerLicencePayments();
 <button type="button" class="secondary" onclick="backToClientMenu()">← Back to Menu</button>
   <h3>Polling Station Payment</h3>
   <p>Review your unpaid polling stations and submit your M-Pesa payment details.</p>
+
+  <div style="background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:12px; margin:12px 0;">
+    <p style="margin:0 0 8px 0;"><strong>Pay via M-Pesa</strong></p>
+    <p style="font-size:22px; font-weight:bold; margin:0 0 10px 0;">0722722617</p>
+    <button type="button"
+      onclick="copyStationMpesaNumber()"
+      style="background:#168447;color:white;">
+      Copy M-Pesa Number
+    </button>
+    <p id="mpesaCopyMessage" class="muted" role="status"></p>
+  </div>
+
 
   <p id="paymentSummary">Loading payment summary...</p>
 
