@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -93,7 +92,6 @@ height:120px;
   cursor:pointer;
   overflow:hidden;
 }
-
 #ownerProfilePreview{
   display:flex;
   align-items:center;
@@ -169,8 +167,7 @@ height:120px;
 <script>
 
 
-
- let signedInRole = null; 
+let signedInRole = null; 
 
   async function saveAgentPreparedDraft(report) {
   const { data: sessionData, error: sessionError } =
@@ -233,9 +230,8 @@ height:120px;
 
   localStorage.setItem(storageKey, JSON.stringify(draft));
   }
-  
 
-async function loadCampaignCount() {
+  async function loadCampaignCount() {
   const { count, error } = await pollySyncDB
     .from('campaigns')
     .select('*', { count: 'exact', head: true });
@@ -306,8 +302,6 @@ async function loadCampaignCount() {
     }
   }
 }
-
-
 
 
 
@@ -505,7 +499,7 @@ async function loadOwnerPaymentRequests() {
         `
         : '';
 
-      return `
+return `
         <div class="tile">
           <strong>${safe(campaign?.aspirant_name || 'Unknown campaign')}</strong>
           <p>Client: ${safe(campaign?.client_email || 'Not provided')}</p>
@@ -616,7 +610,8 @@ async function loadOwnerLicencePayments() {
           type="button"
           onclick="reviewCampaignLicencePayment('${requestId}', 'approved')">
           Verify Code & Approve
-  </button>
+        </button>
+
         <button
           type="button"
           onclick="reviewCampaignLicencePayment('${requestId}', 'rejected')">
@@ -645,7 +640,6 @@ async function loadOwnerLicencePayments() {
       'Could not load licence payments. Please refresh and try again.';
   }
 }
-
 
 async function reviewCampaignLicencePayment(requestId, decision) {
   const message = document.getElementById(
@@ -736,7 +730,9 @@ async function reviewCampaignLicencePayment(requestId, decision) {
 }
 
 
-async function reviewStationPayment(requestId, approve) {
+
+
+    async function reviewStationPayment(requestId, approve) {
   const action = approve ? 'approve' : 'reject';
 
   const confirmed = confirm(
@@ -773,7 +769,7 @@ async function reviewStationPayment(requestId, approve) {
     );
   }
 }
-  
+
 async function ownerVerifyStationPayment(requestId) {
   const input = document.getElementById(
     `ownerReceipt_${requestId}`
@@ -977,7 +973,6 @@ if (successBox && contest) {
     statusElement.textContent = 'Unavailable';
   }
 }
-
 
 async function registerClientStation() {
   const stationInput = document.getElementById('newStationName');
@@ -1194,8 +1189,7 @@ async function loadClientStations() {
     console.error('Polling station loading error:', error);
         list.textContent = 'An unexpected error occurred while loading stations.';
   }
-  }
-  
+}
 
 async function loadStationPaymentQuote() {
   const summary = document.getElementById('paymentSummary');
@@ -1252,7 +1246,7 @@ async function loadStationPaymentQuote() {
 
 
 
-async function submitStationPaymentRequest() {
+  async function submitStationPaymentRequest() {
   const receiptInput = document.getElementById('mpesaReceipt');
   const message = document.getElementById('paymentRequestMessage');
   const button = document.getElementById('submitStationPaymentButton');
@@ -1336,7 +1330,6 @@ async function loadClientPaymentRequestStatus() {
   }
 
 
-
 function updateContestLocationFields() {
   const position = document.getElementById('contestPosition').value;
   const constituency = document.getElementById('contestConstituency');
@@ -1369,7 +1362,7 @@ updateContestLocationFields();
 
 
 
-async function registerCampaign() {
+  async function registerCampaign() {
   const name = document.getElementById('aspirantName').value.trim();
   const position = document.getElementById('contestPosition').value;
   const county = document.getElementById('contestCounty').value.trim();
@@ -1480,10 +1473,10 @@ async function registerCampaign() {
   document.getElementById('clientEmail').value = '';
   document.getElementById('clientCode').value = '';
   document.getElementById('licenceExpiry').value = '';
-}
+  }
 
 async function signInToPollySync() {
- to const email = document.getElementById('loginEmail').value.trim();
+  const email = document.getElementById('loginEmail').value.trim();
   const password = document.getElementById('loginPassword').value;
   const message = document.getElementById('loginMessage');
 
@@ -1583,15 +1576,13 @@ const welcome=document.getElementById('welcome');
   const ownerProfileArea=document.getElementById('ownerProfileArea');
 if(ownerProfileArea) ownerProfileArea.style.display='none';
 
-
-if(role==='owner'){
+  if(role==='owner'){
     if(ownerProfileArea) ownerProfileArea.style.display='block';
     type.textContent='POLLYSYNC · PLATFORM ADMINISTRATION';
     title.textContent='Welcome, Kelvin Kipruto Kemboi!';
     description.textContent='Manage campaign registrations and platform access.';
     content.innerHTML=`
-      
-            
+
 <button type="button" onclick="logoutPollySync()" class="logout-button">Logout</button>
 
 <div class="owner-nav">
@@ -1599,20 +1590,25 @@ if(role==='owner'){
   <button type="button" onclick="showOwnerSection('campaignsSection')">Campaigns & Licences</button>
   <button type="button" onclick="showOwnerSection('billingSection')">Stations & Billing</button>
   <button type="button" onclick="showOwnerSection('paymentsSection')">Payment Requests</button>
-  <button type="button" onclick="showOwnerSection('licencePaymentsSection')">Licence Payments</button>
+<button type="button" onclick="showOwnerSection('licencePaymentsSection')">Licence Payments</button>
   <button type="button" onclick="showOwnerSection('pricingSection')">Platform Pricing</button>
 </div>
 
 <div class="tiles">
-  <div class="tile">Campaigns<strong id="campaignCount">0</strong></div>
-</div>
-
-<div class="card owner-section" id="billingSection">
+  
+        <div class="tile">Campaigns<strong id="campaignCount">0</strong></div>
+      </div>
+      
+      
+      <div class="card owner-section" id="billingSection">
   <h3>Polling Stations & Billing</h3>
   <p class="muted">Station counts, payment status and amounts due will appear here.</p>
   <div id="stationBillingList">Loading station billing...</div>
-</div>
+  </div>
+  
 
+
+  
 <div class="card owner-section" id="paymentsSection">
   <h3>Polling Station Payment Requests</h3>
   <p class="muted">
@@ -1622,7 +1618,6 @@ if(role==='owner'){
     Loading payment requests...
   </div>
 </div>
-
 <div class="card owner-section" id="licencePaymentsSection">
   <h3>Campaign Licence Payments</h3>
   <p class="muted">
@@ -1633,8 +1628,7 @@ if(role==='owner'){
     Loading campaign licence payments...
   </div>
 </div>
-
-<div class="card owner-section" id="pricingSection">
+ <div class="card owner-section" id="pricingSection">
   <h3>Platform Pricing</h3>
   <p class="muted">Set the standard fee charged per polling station.</p>
 
@@ -1651,9 +1645,8 @@ if(role==='owner'){
     Save Default Price
   </button>
 
-  <p id="pricingMessage" class="muted"></p>
+    <p id="pricingMessage" class="muted"></p>
 </div>
-
 <div class="card owner-section" id="campaignsSection">
   <h3>Registered Campaigns</h3>
   <div id="campaignList">Loading campaigns...</div>
@@ -1665,29 +1658,30 @@ if(role==='owner'){
   <label for="aspirantName">Aspirant Full Name</label>
   <input id="aspirantName" type="text" placeholder="Enter full name">
 
-  <label for="contestPosition">Electoral Position</label>
-  <select id="contestPosition">
-    <option value="">Select position</option>
-    <option value="MCA">MCA</option>
-    <option value="MP">Member of Parliament (MP)</option>
-    <option value="Senator">Senator</option>
-    <option value="Women Representative">Women Representative</option>
-    <option value="Governor">Governor</option>
-  </select>
+  
+<label for="contestPosition">Electoral Position</label>
+<select id="contestPosition">
+  <option value="">Select position</option>
+  <option value="MCA">MCA</option>
+  <option value="MP">Member of Parliament (MP)</option>
+  <option value="Senator">Senator</option>
+  <option value="Women Representative">Women Representative</option>
+  <option value="Governor">Governor</option>
+</select>
 
-  <label for="contestCounty">County</label>
-  <input id="contestCounty" type="text" placeholder="Enter county">
+<label for="contestCounty">County</label>
+<input id="contestCounty" type="text" placeholder="Enter county">
 
-  <label for="contestConstituency">Constituency</label>
-  <input id="contestConstituency" type="text" placeholder="Enter constituency">
+<label for="contestConstituency">Constituency</label>
+<input id="contestConstituency" type="text" placeholder="Enter constituency">
 
-  <label for="contestWard">Ward</label>
-  <input id="contestWard" type="text" placeholder="Enter ward">
+<label for="contestWard">Ward</label>
+<input id="contestWard" type="text" placeholder="Enter ward">
+  
 
+  
   <label for="clientEmail">Client Email Address</label>
-  <input id="clientEmail" type="email" placeholder="Enter client's email address">
-
-  <label for="clientCode">Client Code</label>
+<input id="clientEmail" type="email" placeholder="Enter client's email address"><label for="clientCode">Client Code</label>
   <input id="clientCode" type="text" placeholder="Create a unique code">
 
   <label for="licenceExpiry">Licence Expiry Date</label>
@@ -1696,10 +1690,10 @@ if(role==='owner'){
   <button type="button" onclick="registerCampaign()">Register Campaign</button>
   <p id="campaignMessage" class="muted"></p>
 </div>`;
-    loadCampaignCount();
+        loadCampaignCount();
     loadStationBilling();
     loadOwnerPaymentRequests();
-    loadOwnerLicencePayments();
+loadOwnerLicencePayments();
     showOwnerSection('campaignsSection');
 
     // Owner profile photo
@@ -1758,9 +1752,6 @@ if(role==='owner'){
         reader.readAsDataURL(file);
       };
     }
-}
-
-
   }else if(role==='client'){
     type.textContent='POLLYSYNC · CAMPAIGN MANAGEMENT';
     title.textContent='Your Campaign Portal';
@@ -1902,7 +1893,6 @@ if(role==='owner'){
   <div id="clientPaymentRequestStatus"></div>
 </div>
 
-
 <div class="card" id="clientContestantsSection" style="display:none;">
   <button type="button" class="secondary" onclick="backToClientMenu()">← Back to Menu</button>
   <h3>Register Contestants</h3>
@@ -2043,8 +2033,9 @@ function backToClientMenu() {
     menuButton.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
-  
-function previewResult(){
+
+
+  function previewResult(){
   const station =
     document.getElementById('assignedStation').textContent.trim();
   const votersText =
@@ -2158,8 +2149,6 @@ function previewResult(){
     '<br><br><button type="button" onclick="confirmAgentResult()">Confirm figures</button></div>';
 }
 
-
-
 async function confirmAgentResult() {
   const summary = document.getElementById('summary');
   const candidateInputs = document.querySelectorAll(
@@ -2267,7 +2256,7 @@ async function submitAgentResult() {
       other_votes: report.other_votes
     };
 
-    const { data, error } = await pollySyncDB.rpc(
+const { data, error } = await pollySyncDB.rpc(
       'receive_result_submission',
       {
         p_client_submission_id: window.agentSubmissionClientId,
@@ -2305,6 +2294,7 @@ async function submitAgentResult() {
     window.agentSubmissionInFlight = false;
   }
   }
+
 
 function showAgentCancellationWindow(data) {
   const summary = document.getElementById('summary');
@@ -2538,7 +2528,8 @@ async function loadAgentAssignment() {
   }
   }
 
-    function goBack(){
+
+  function goBack(){
   document.getElementById('portal').classList.add('hidden');
   document.getElementById('welcome').classList.add('hidden');
   document.getElementById('loginCard').style.display = 'block';
@@ -2564,7 +2555,6 @@ async function loadAgentAssignment() {
   document.getElementById('loginMessage').textContent =
     'You have been signed out successfully.';
 }
-
 
 
 async function activateCampaignLicence(campaignId) {
@@ -3023,7 +3013,7 @@ async function inviteClient(campaignId) {
   }
 }
   </script>
-
+  
   <script src="client-results.js"></script>
 
 
