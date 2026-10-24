@@ -2016,6 +2016,29 @@ function openClientMenuSection(sectionId) {
 }
 
 
+function backToClientMenu() {
+  const sectionIds = [
+    'clientContestantsSection',
+    'clientRegisterStationSection',
+    'clientStationPaymentSection',
+    'clientAgentInviteSection'
+  ];
+
+  sectionIds.forEach(function(id) {
+    const section = document.getElementById(id);
+    if (section) section.style.display = 'none';
+  });
+
+  const menu = document.getElementById('clientMenuPanel');
+  if (menu) menu.style.display = 'block';
+
+  const menuButton = document.getElementById('clientMenuButton');
+  if (menuButton) {
+    menuButton.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+
   function previewResult(){
   const station =
     document.getElementById('assignedStation').textContent.trim();
