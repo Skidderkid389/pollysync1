@@ -1766,6 +1766,21 @@ loadOwnerLicencePayments();
     content.innerHTML=`
       
       <button type="button" onclick="logoutPollySync()" class="logout-button">Logout</button>
+
+<div style="display:flex; justify-content:flex-end; margin:10px 0;">
+  <button type="button" id="clientMenuButton" onclick="toggleClientMenu()">
+    ☰ Menu
+  </button>
+</div>
+
+<div id="clientMenuPanel" class="card" style="display:none;">
+  <h3>Campaign Menu</h3>
+  <button type="button" onclick="openClientMenuSection('clientContestantsSection')">Register Contestant</button>
+  <button type="button" onclick="openClientMenuSection('clientRegisterStationSection')">Register Station</button>
+  <button type="button" onclick="openClientMenuSection('clientStationPaymentSection')">Submit Payment Request</button>
+  <button type="button" onclick="openClientMenuSection('clientAgentInviteSection')">Send Agent Invitation</button>
+</div>
+
 <div id="clientResultsSummary"></div>
       
       <div class="card">
@@ -1801,7 +1816,7 @@ loadOwnerLicencePayments();
       </div>
       
       
-            <div class="card">
+            <div class="card" id="clientRegisterStationSection" style="display:none;">
         <h3>Register Polling Stations</h3>
         <p class="muted">Add the polling stations for your campaign.</p>
 
@@ -1830,7 +1845,7 @@ loadOwnerLicencePayments();
       </div>
       
 
-<div class="card" id="clientAgentInviteSection">
+<div class="card" id="clientAgentInviteSection" style="display:none;">
   <h3>Invite a Polling Agent</h3>
   <p class="muted">
     Invite an agent to your campaign and assign their polling station.
@@ -1855,8 +1870,7 @@ loadOwnerLicencePayments();
 
   <p id="agentInviteMessage" class="muted" role="status"></p>
 </div>
-  
-<div class="card">
+ <div class="card" id="clientStationPaymentSection" style="display:none;">
   <h3>Polling Station Payment</h3>
   <p>Review your unpaid polling stations and submit your M-Pesa payment details.</p>
 
@@ -1883,7 +1897,7 @@ loadOwnerLicencePayments();
   <div id="clientPaymentRequestStatus"></div>
 </div>
 
-<div class="card" id="clientContestantsSection">
+<div class="card" id="clientContestantsSection" style="display:none;">
   <h3>Register Contestants</h3>
   <p class="muted">
     Register contestants once for your electoral contest.
@@ -1961,6 +1975,44 @@ loadAgentContestants();
   welcome.classList.add('hidden');
   portal.classList.remove('hidden');
 }
+
+
+function toggleClientMenu() {
+  const menu = document.getElementById('clientMenuPanel');
+  if (!menu) return;
+
+  menu.style.display =
+    menu.style.display === 'none' ? 'block' : 'none';
+}
+
+function openClientMenuSection(sectionId) {
+  const menu = document.getElementById('clientMenuPanel');
+  const sectionIds = [
+    'clientContestantsSection',
+    'clientRegisterStationSection',
+    'clientStationPaymentSection',
+    'clientAgentInviteSection'
+  ];
+
+  const section = document.getElementById(sectionId);
+
+  if (!sectionIds.includes(sectionId) || !section) {
+    alert('This section could not be found. Please try again.');
+    return;
+  }
+
+  sectionIds.forEach(function(id) {
+    const item = document.getElementById(id);
+    if (item) item.style.display = 'none';
+  });
+
+  section.style.display = 'block';
+
+  if (menu) menu.style.display = 'none';
+
+  section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 
   function previewResult(){
   const station =
