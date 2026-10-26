@@ -1705,7 +1705,9 @@ if(ownerProfileArea) ownerProfileArea.style.display='none';
 
   <button type="button" onclick="registerCampaign()">Register Campaign</button>
   <p id="campaignMessage" class="muted"></p>
-  <div class="card owner-section" id="contestRegistrySection">
+</div>
+
+<div class="card owner-section" id="contestRegistrySection">
   <h3>Manage Electoral Contests</h3>
   <p>Register each electoral contest once so campaigns can select it later.</p>
 
@@ -1735,6 +1737,7 @@ if(ownerProfileArea) ownerProfileArea.style.display='none';
   <div id="ownerContestRegistryList">Tap refresh to load contests.</div>
   <button type="button" onclick="loadOwnerContestRegistry()">Refresh Contest List</button>
 </div>
+  
 </div>`;
         loadCampaignCount();
     loadStationBilling();
