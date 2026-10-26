@@ -86,6 +86,18 @@
       const reports = Array.isArray(data?.reports)
         ? data.reports
         : [];
+            // Check for disagreements at shared polling stations.
+      const { data: comparisonData, error: comparisonError } =
+        await db.rpc('client_get_my_station_comparison_status');
+
+      if (comparisonError) throw comparisonError;
+
+      const comparisonByStation = new Map(
+        (Array.isArray(comparisonData) ? comparisonData : []).map(item => [
+          item.station_id,
+          item
+        ])
+      );
 
       // A station counts only if it has exactly one
       // non-cancelled report and that report is locked.
@@ -264,6 +276,13 @@
             const hasConflict =
               report.status !== 'cancelled' &&
               reportsPerStation[report.station_id] > 1;
+                      const comparison = comparisonByStation.get(
+              report.station_id
+            );
+
+            const hasCrossCampaignDiscrepancy =
+              report.status !== 'cancelled' &&
+              comparison?.has_open_discrepancy === true;
 
             const candidateLines = (
               report.candidate_votes?.candidates || []
@@ -315,6 +334,9 @@
 
                 ${hasConflict
                   ? '<p class="notice">Multiple non-cancelled reports exist for this station. Excluded from rankings pending review.</p>'
+                  : ''}
+                                  ${hasCrossCampaignDiscrepancy
+                  ? '<p class="notice">A disagreement has been detected between reports linked to this shared polling station. This report is flagged for review. Do not treat this comparison as an official result.</p>'
                   : ''}
 
                 <p>
