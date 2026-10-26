@@ -2686,6 +2686,43 @@ async function activateCampaignLicence(campaignId) {
   }
 
 
+  async function loadOwnerContestRegistry() {
+  const list = document.getElementById('ownerContestRegistryList');
+  if (!list) return;
+
+  list.textContent = 'Loading registered contests...';
+
+  try {
+    const { data, error } =
+      await pollySyncDB.rpc('owner_list_electoral_contests');
+
+    if (error) throw error;
+
+    if (!Array.isArray(data) || data.length === 0) {
+      list.textContent = 'No contests registered yet.';
+      return;
+    }
+
+    list.replaceChildren();
+
+    data.forEach(contest => {
+      const item = document.createElement('div');
+      item.className = 'tile';
+      item.textContent = [
+        contest.position,
+        contest.ward,
+        contest.constituency,
+        contest.county
+      ].filter(Boolean).join(' — ');
+
+      list.appendChild(item);
+    });
+  } catch (err) {
+    list.textContent = 'Could not load contests: ' + err.message;
+  }
+}
+
+
 
 async function linkCampaignContest(campaignId) {
   const { data: sessionData } = await pollySyncDB.auth.getSession();
