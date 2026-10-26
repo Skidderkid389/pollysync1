@@ -2722,7 +2722,82 @@ async function activateCampaignLicence(campaignId) {
   }
 }
 
+async function registerOwnerElectoralContest() {
+  const message = document.getElementById('contestRegistryMessage');
 
+  const position = document.getElementById('registryPosition').value.trim();
+  const county = document.getElementById('registryCounty').value.trim();
+  const constituency = document.getElementById('registryConstituency').value.trim();
+  const ward = document.getElementById('registryWard').value.trim();
+
+  if (!position || !county) {
+    message.textContent = 'Position and county are required.';
+    return;
+  }
+
+  if ((position === 'MCA' || position === 'MP') && !constituency) {
+    message.textContent = 'Please enter the constituency.';
+    return;
+  }
+
+  if (position === 'MCA' && !ward) {
+    message.textContent = 'Please enter the ward.';
+    return;
+  }
+
+  const normalise = value => (value || '').trim().toLowerCase();
+
+  message.textContent = 'Checking for an existing contest...';
+
+  try {
+    const { data: contests, error: listError } =
+      await pollySyncDB.rpc('owner_list_electoral_contests');
+
+    if (listError) throw listError;
+
+    const existing = (contests || []).find(item =>
+      normalise(item.position) === normalise(position) &&
+      normalise(item.county) === normalise(county) &&
+      normalise(item.constituency) === normalise(
+        position === 'MCA' || position === 'MP' ? constituency : ''
+      ) &&
+      normalise(item.ward) === normalise(position === 'MCA' ? ward : '')
+    );
+
+    if (existing) {
+      message.textContent =
+        'This contest already exists. Use the existing contest instead of creating a duplicate.';
+      return;
+    }
+
+    if (!confirm(
+      'Register this electoral contest?\n\n' +
+      [position, ward, constituency, county].filter(Boolean).join(' — ')
+    )) return;
+
+    const { error: createError } =
+      await pollySyncDB.rpc('owner_create_electoral_contest', {
+        p_position: position,
+        p_county: county,
+        p_constituency: position === 'MCA' || position === 'MP'
+          ? constituency : null,
+        p_ward: position === 'MCA' ? ward : null
+      });
+
+    if (createError) throw createError;
+
+    message.textContent = 'Contest registered successfully.';
+
+    document.getElementById('registryPosition').value = '';
+    document.getElementById('registryCounty').value = '';
+    document.getElementById('registryConstituency').value = '';
+    document.getElementById('registryWard').value = '';
+
+    await loadOwnerContestRegistry();
+  } catch (err) {
+    message.textContent = 'Could not register contest: ' + err.message;
+  }
+  }
 
 async function linkCampaignContest(campaignId) {
   const { data: sessionData } = await pollySyncDB.auth.getSession();
