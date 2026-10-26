@@ -2655,86 +2655,155 @@ async function activateCampaignLicence(campaignId) {
   }
 
 
+
 async function linkCampaignContest(campaignId) {
-  const position = prompt(
-    'Enter electoral position (MCA, MP, Senator, Women Representative, Governor):'
-  );
+  const { data: sessionData } = await pollySyncDB.auth.getSession();
 
-  if (position === null) return;
-
-  const county = prompt('Enter county:');
-  if (county === null) return;
-
-  const constituency = prompt(
-    'Enter constituency (leave blank if not applicable):'
-  );
-  if (constituency === null) return;
-
-  const ward = prompt(
-    'Enter ward (leave blank if not applicable):'
-  );
-  if (ward === null) return;
-
-  if (!position.trim() || !county.trim()) {
-    alert('Position and county are required.');
-    return;
-  }
-
-  if (
-    position.trim().toLowerCase() === 'mca' &&
-    (!constituency.trim() || !ward.trim())
-  ) {
-    alert('MCA requires a constituency and ward.');
-    return;
-  }
-
-  if (
-    position.trim().toLowerCase() === 'mp' &&
-    !constituency.trim()
-  ) {
-    alert('MP requires a constituency.');
-    return;
-  }
-
-  if (!confirm(
-    'Link this campaign to:\n' +
-    position.trim() + '\n' +
-    county.trim() + '\n' +
-    (constituency.trim() || 'No constituency') + '\n' +
-    (ward.trim() || 'No ward') + '\n\nContinue?'
-  )) {
+  if (!sessionData?.session) {
+    alert('Please sign in again.');
     return;
   }
 
   try {
-    const { data: sessionData } =
-      await pollySyncDB.auth.getSession();
-      if (!sessionData?.session) {
-      alert('Please sign in again.');
-      return;
-    }
-
-    const { data, error } = await pollySyncDB.rpc(
-      'owner_link_campaign_electoral_contest',
-      {
-        p_campaign_id: campaignId,
-        p_position: position.trim(),
-        p_county: county.trim(),
-        p_constituency: constituency.trim() || null,
-        p_ward: ward.trim() || null
-      }
-    );
+    const { data: contests, error } =
+      await pollySyncDB.rpc('owner_list_electoral_contests');
 
     if (error) throw error;
 
-    alert('Electoral contest linked successfully!');
-    await loadCampaignCount();
+    if (!Array.isArray(contests) || contests.length === 0) {
+      alert('No electoral contests are registered yet. Register a contest first.');
+      return;
+    }
 
-  } catch (error) {
-    console.error('Campaign linking failed:', error);
-    alert('Could not link electoral contest: ' + error.message);
+    const overlay = document.createElement('div');
+    Object.assign(overlay.style, {
+      position: 'fixed',
+      inset: '0',
+      background: 'rgba(0,0,0,0.65)',
+      zIndex: '99999',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '16px'
+    });
+
+    const panel = document.createElement('div');
+    Object.assign(panel.style, {
+      background: '#fff',
+      color: '#222',
+      padding: '20px',
+      borderRadius: '12px',
+      width: '100%',
+      maxWidth: '480px',
+      maxHeight: '85vh',
+      overflowY: 'auto'
+    });
+
+    const heading = document.createElement('h3');
+    heading.textContent = 'Link Client to Electoral Contest';
+
+    const help = document.createElement('p');
+    help.textContent =
+      'Select the exact registered contest for this campaign.';
+
+    const select = document.createElement('select');
+    select.style.width = '100%';
+    select.style.padding = '12px';
+    select.style.margin = '12px 0';
+
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Choose a contest...';
+    select.appendChild(placeholder);
+
+    contests.forEach(contest => {
+      const option = document.createElement('option');
+      option.value = contest.id;
+      option.textContent = [
+        contest.position,
+        contest.ward,
+        contest.constituency,
+        contest.county
+      ].filter(Boolean).join(' — ');
+      select.appendChild(option);
+    });
+
+    const message = document.createElement('p');
+    message.setAttribute('role', 'status');
+
+    const actions = document.createElement('div');
+    actions.style.display = 'flex';
+    actions.style.gap = '10px';
+
+    const linkButton = document.createElement('button');
+    linkButton.type = 'button';
+    linkButton.textContent = 'Link Selected Contest';
+
+    const cancelButton = document.createElement('button');
+    cancelButton.type = 'button';
+    cancelButton.textContent = 'Cancel';
+
+    cancelButton.onclick = () => overlay.remove();
+
+    linkButton.onclick = async () => {
+      const contestId = select.value;
+
+      if (!contestId) {
+        message.textContent = 'Please select a contest.';
+        return;
+      }
+
+      const selected = contests.find(item => item.id === contestId);
+      if (!selected) {
+        message.textContent = 'Invalid contest selection.';
+        return;
+      }
+
+      const description = [
+        selected.position,
+        selected.ward,
+        selected.constituency,
+        selected.county
+      ].filter(Boolean).join(' — ');
+
+      if (!confirm('Link this campaign to:\n\n' + description + '?')) {
+        return;
+      }
+
+      linkButton.disabled = true;
+      message.textContent = 'Linking selected contest...';
+
+      try {
+        const { error: linkError } = await pollySyncDB.rpc(
+          'owner_link_campaign_to_selected_contest',
+          {
+            p_campaign_id: campaignId,
+            p_contest_id: contestId
+          }
+        );
+
+        if (linkError) throw linkError;
+
+        message.textContent = 'Contest linked successfully.';
+        await loadCampaignCount();
+        setTimeout(() => overlay.remove(), 700);
+      } catch (err) {
+        message.textContent = 'Could not link contest: ' + err.message;
+        linkButton.disabled = false;
+      }
+    };
+
+    actions.append(linkButton, cancelButton);
+    panel.append(heading, help, select, actions, message);
+    overlay.appendChild(panel);
+    document.body.appendChild(overlay);
+
+  } catch (err) {
+    console.error('Could not load electoral contests:', err);
+    alert('Could not load electoral contests: ' + err.message);
   }
   }
+  
 
 
 
